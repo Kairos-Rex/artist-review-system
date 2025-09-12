@@ -745,28 +745,46 @@
                 </div>
             `;
 
-            // 点击选择/弹出气泡框
+            // 点击选择（仅针对没有二级选项的项目）
             div.addEventListener('click', function(e) {
                 if (e.target.closest('.edit-btn')) return;
                 
-                // 关闭其他项目的气泡框，保持当前项目的独立性
-                const allBubbles = document.querySelectorAll('.sub-options-bubble');
-                allBubbles.forEach(bubble => {
-                    const bubbleItemId = bubble.getAttribute('data-item-id');
-                    const bubbleType = bubble.getAttribute('data-type');
-                    if (bubbleItemId !== item.id.toString() || bubbleType !== type) {
-                        bubble.remove();
-                    }
-                });
-                
-                // 如果有二级选项，弹出气泡选择框
-                if (item.subOptions && item.subOptions.length > 0) {
-                    showSubOptionsBubble(item, type, div);
-                } else {
-                    // 没有二级选项，直接切换选择状态
+                // 如果没有二级选项，直接切换选择状态
+                if (!item.subOptions || item.subOptions.length === 0) {
                     toggleSelection(item.id, type);
                 }
             });
+            
+            // 鼠标悬停显示二级选项气泡
+            if (item.subOptions && item.subOptions.length > 0) {
+                let hoverTimer;
+                
+                div.addEventListener('mouseenter', function(e) {
+                    if (e.target.closest('.edit-btn')) return;
+                    
+                    // 延迟显示气泡，避免快速移动时频繁触发
+                    hoverTimer = setTimeout(() => {
+                        // 关闭其他项目的气泡框，保持当前项目的独立性
+                        const allBubbles = document.querySelectorAll('.sub-options-bubble');
+                        allBubbles.forEach(bubble => {
+                            const bubbleItemId = bubble.getAttribute('data-item-id');
+                            const bubbleType = bubble.getAttribute('data-type');
+                            if (bubbleItemId !== item.id.toString() || bubbleType !== type) {
+                                bubble.remove();
+                            }
+                        });
+                        
+                        showSubOptionsBubble(item, type, div);
+                    }, 200); // 200ms延迟显示
+                });
+                
+                div.addEventListener('mouseleave', function(e) {
+                    if (hoverTimer) {
+                        clearTimeout(hoverTimer);
+                        hoverTimer = null;
+                    }
+                });
+            }
 
             // 编辑按钮事件
             const editBtn = div.querySelector('.edit-btn');
