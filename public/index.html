@@ -1272,35 +1272,76 @@
                 
                 let generatedText = '';
                 
-                // 使用改进的API响应处理逻辑
-                const messages = data.messages || (data.data && data.data.messages) || [];
+                // 增强的API响应处理逻辑
+                console.log('=== API响应解析开始 ===');
+                console.log('原始响应数据:', data);
+                
+                // 尝试多种可能的消息数组路径
+                let messages = [];
+                if (data.messages && Array.isArray(data.messages)) {
+                    messages = data.messages;
+                    console.log('从data.messages获取消息数组');
+                } else if (data.data && data.data.messages && Array.isArray(data.data.messages)) {
+                    messages = data.data.messages;
+                    console.log('从data.data.messages获取消息数组');
+                } else if (data.result && data.result.messages && Array.isArray(data.result.messages)) {
+                    messages = data.result.messages;
+                    console.log('从data.result.messages获取消息数组');
+                } else {
+                    console.log('未找到标准消息数组，尝试其他字段');
+                }
+                
                 console.log('找到消息数量:', messages.length);
+                console.log('消息数组内容:', messages);
                 
                 if (messages.length > 0) {
-                    // 查找assistant消息，使用更宽松的过滤条件
+                    // 查找assistant消息，使用最宽松的过滤条件
                     const assistantMessages = messages.filter(msg => {
-                        const isAssistant = msg.role === 'assistant';
-                        const hasContent = msg.content && typeof msg.content === 'string' && msg.content.trim() !== '';
-                        console.log(`生成话术 - 消息检查 - 角色: ${msg.role}, 有内容: ${hasContent}, 内容: "${msg.content}"`);
+                        console.log('检查消息:', msg);
+                        const isAssistant = msg.role === 'assistant' || msg.type === 'assistant';
+                        const hasContent = (msg.content && typeof msg.content === 'string' && msg.content.trim() !== '') ||
+                                         (msg.text && typeof msg.text === 'string' && msg.text.trim() !== '') ||
+                                         (msg.message && typeof msg.message === 'string' && msg.message.trim() !== '');
+                        console.log(`消息检查 - 角色: ${msg.role || msg.type}, 是助理: ${isAssistant}, 有内容: ${hasContent}`);
+                        if (msg.content) console.log('content内容:', msg.content);
+                        if (msg.text) console.log('text内容:', msg.text);
+                        if (msg.message) console.log('message内容:', msg.message);
                         return isAssistant && hasContent;
                     });
                     
                     console.log('找到assistant消息数量:', assistantMessages.length);
                     
                     if (assistantMessages.length > 0) {
-                        // 取最后一条有效的assistant回复
-                        generatedText = assistantMessages[assistantMessages.length - 1].content;
+                        // 取最后一条有效的assistant回复，尝试多个内容字段
+                        const lastMessage = assistantMessages[assistantMessages.length - 1];
+                        generatedText = lastMessage.content || lastMessage.text || lastMessage.message || '';
                         console.log('使用的生成内容:', generatedText);
                     }
-                } else if (data && data.content) {
-                    // 备用：直接从content字段获取
-                    generatedText = data.content;
-                    console.log('从content字段获取内容:', generatedText);
-                } else if (data && data.text) {
-                    // 备用：从text字段获取
-                    generatedText = data.text;
-                    console.log('从text字段获取内容:', generatedText);
                 }
+                
+                // 如果没有找到消息，尝试直接从响应的其他字段获取
+                if (!generatedText) {
+                    console.log('未从消息数组获取到内容，尝试其他字段');
+                    if (data && data.content) {
+                        generatedText = data.content;
+                        console.log('从data.content获取内容:', generatedText);
+                    } else if (data && data.text) {
+                        generatedText = data.text;
+                        console.log('从data.text获取内容:', generatedText);
+                    } else if (data && data.message) {
+                        generatedText = data.message;
+                        console.log('从data.message获取内容:', generatedText);
+                    } else if (data && data.result && data.result.content) {
+                        generatedText = data.result.content;
+                        console.log('从data.result.content获取内容:', generatedText);
+                    } else if (data && data.data && data.data.content) {
+                        generatedText = data.data.content;
+                        console.log('从data.data.content获取内容:', generatedText);
+                    }
+                }
+                
+                console.log('=== API响应解析结束 ===');
+                console.log('最终提取的内容:', generatedText);
                 
                 console.log('提取的生成文本:', generatedText);
                 
@@ -1325,27 +1366,47 @@
                 showNotification('话术生成成功！', 'success');
                 
             } catch (error) {
-                console.error('API调用失败:', error);
+                console.error('=== API调用异常 ===');
+                console.error('错误对象:', error);
+                console.error('错误消息:', error.message);
+                console.error('错误堆栈:', error.stack);
                 
-                // 详细的错误信息
+                // 详细的错误信息和诊断
                 let errorMessage = 'API调用失败';
+                let diagnosticInfo = '';
+                
                 if (error.message.includes('Failed to fetch')) {
                     errorMessage = 'API调用失败：网络连接错误或CORS问题';
+                    diagnosticInfo = '可能原因：网络连接问题、CORS策略限制、或API服务不可用';
                 } else if (error.message.includes('401')) {
                     errorMessage = 'API调用失败：API密钥无效或已过期';
+                    diagnosticInfo = '请检查API密钥是否正确配置且未过期';
                 } else if (error.message.includes('403')) {
                     errorMessage = 'API调用失败：权限不足或机器人ID无效';
+                    diagnosticInfo = '请确认机器人ID正确且API密钥有访问权限';
                 } else if (error.message.includes('429')) {
                     errorMessage = 'API调用失败：请求频率过高，请稍后重试';
+                    diagnosticInfo = '请等待一段时间后重试，或检查API配额限制';
                 } else if (error.message.includes('500')) {
                     errorMessage = 'API调用失败：服务器内部错误';
+                    diagnosticInfo = '这是服务器端问题，请稍后重试';
+                } else {
+                    diagnosticInfo = '未知错误类型，请查看控制台详细信息';
                 }
                 
-                console.log('详细错误信息:', {
-                    apiKey: getApiKey() ? '已配置' : '未配置',
-                    botId: getBotId() ? '已配置' : '未配置',
-                    error: error.message
+                console.log('=== 详细诊断信息 ===');
+                console.log('API配置状态:', {
+                    apiKey: getApiKey() ? `已配置(${getApiKey().substring(0, 10)}...)` : '未配置',
+                    botId: getBotId() ? `已配置(${getBotId()})` : '未配置',
+                    isConfigured: isApiConfigured()
                 });
+                console.log('错误类型:', error.name);
+                console.log('错误消息:', error.message);
+                console.log('诊断建议:', diagnosticInfo);
+                console.log('=== 诊断信息结束 ===');
+                
+                // 显示用户友好的错误信息
+                showNotification(`${errorMessage}。${diagnosticInfo}`, 'error');
                 
                 // 如果API调用失败，提供备用内容
                 const fallbackText = `【优化后的话术】\n\n${inputText.trim()}\n\n经过AI优化，以上话术在以下方面得到了改进：\n1. 语言表达更加专业和礼貌\n2. 逻辑结构更加清晰\n3. 说服力和感染力得到增强\n4. 符合现代商务沟通标准\n\n建议在实际使用时根据具体情况进行微调。\n\n注意：API调用失败，当前使用备用生成模式。`;
