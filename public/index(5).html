@@ -1325,7 +1325,30 @@
                 }
                 
                 const messagesData = await messagesResponse.json();
-                console.log('获取到的消息数据:', messagesData);
+                console.log('=== 消息响应数据验证 ===');
+                console.log('完整响应数据:', JSON.stringify(messagesData, null, 2));
+                console.log('响应数据类型:', typeof messagesData);
+                console.log('响应状态码:', messagesResponse.status);
+                console.log('响应头信息:', Object.fromEntries(messagesResponse.headers.entries()));
+                
+                // 验证响应数据结构
+                if (!messagesData || typeof messagesData !== 'object') {
+                    throw new Error('消息响应数据格式无效：不是有效的JSON对象');
+                }
+                
+                console.log('是否有data字段:', 'data' in messagesData);
+                console.log('data字段类型:', typeof messagesData.data);
+                console.log('data是否为数组:', Array.isArray(messagesData.data));
+                
+                if (messagesData.data) {
+                    console.log('data数组长度:', messagesData.data.length);
+                    if (messagesData.data.length > 0) {
+                        console.log('第一条消息结构:', messagesData.data[0]);
+                    }
+                } else {
+                    console.warn('警告：响应中没有data字段');
+                    console.log('可用字段:', Object.keys(messagesData));
+                }
                 
                 let generatedText = '';
                 
@@ -1360,55 +1383,6 @@
                     throw new Error('消息数据格式异常');
                 }
                 
-                console.log('找到消息数量:', messages.length);
-                console.log('消息数组内容:', messages);
-                
-                if (messages.length > 0) {
-                    // 查找assistant消息，使用最宽松的过滤条件
-                    const assistantMessages = messages.filter(msg => {
-                        console.log('检查消息:', msg);
-                        const isAssistant = msg.role === 'assistant' || msg.type === 'assistant';
-                        const hasContent = (msg.content && typeof msg.content === 'string' && msg.content.trim() !== '') ||
-                                         (msg.text && typeof msg.text === 'string' && msg.text.trim() !== '') ||
-                                         (msg.message && typeof msg.message === 'string' && msg.message.trim() !== '');
-                        console.log(`消息检查 - 角色: ${msg.role || msg.type}, 是助理: ${isAssistant}, 有内容: ${hasContent}`);
-                        if (msg.content) console.log('content内容:', msg.content);
-                        if (msg.text) console.log('text内容:', msg.text);
-                        if (msg.message) console.log('message内容:', msg.message);
-                        return isAssistant && hasContent;
-                    });
-                    
-                    console.log('找到assistant消息数量:', assistantMessages.length);
-                    
-                    if (assistantMessages.length > 0) {
-                        // 取最后一条有效的assistant回复，尝试多个内容字段
-                        const lastMessage = assistantMessages[assistantMessages.length - 1];
-                        generatedText = lastMessage.content || lastMessage.text || lastMessage.message || '';
-                        console.log('使用的生成内容:', generatedText);
-                    }
-                }
-                
-                // 如果没有找到消息，尝试直接从响应的其他字段获取
-                if (!generatedText) {
-                    console.log('未从消息数组获取到内容，尝试其他字段');
-                    if (data && data.content) {
-                        generatedText = data.content;
-                        console.log('从data.content获取内容:', generatedText);
-                    } else if (data && data.text) {
-                        generatedText = data.text;
-                        console.log('从data.text获取内容:', generatedText);
-                    } else if (data && data.message) {
-                        generatedText = data.message;
-                        console.log('从data.message获取内容:', generatedText);
-                    } else if (data && data.result && data.result.content) {
-                        generatedText = data.result.content;
-                        console.log('从data.result.content获取内容:', generatedText);
-                    } else if (data && data.data && data.data.content) {
-                        generatedText = data.data.content;
-                        console.log('从data.data.content获取内容:', generatedText);
-                    }
-                }
-                
                 console.log('=== API响应解析结束 ===');
                 console.log('最终提取的内容:', generatedText);
                 
@@ -1435,43 +1409,116 @@
                 showNotification('话术生成成功！', 'success');
                 
             } catch (error) {
-                console.error('=== API调用异常 ===');
+                console.error('=== API调用异常详细分析 ===');
                 console.error('错误对象:', error);
                 console.error('错误消息:', error.message);
                 console.error('错误堆栈:', error.stack);
+                console.error('错误类型:', error.constructor.name);
                 
-                // 详细的错误信息和诊断
+                // 网络状态检查
+                console.log('=== 网络状态检查 ===');
+                console.log('在线状态:', navigator.onLine ? '在线' : '离线');
+                console.log('用户代理:', navigator.userAgent);
+                
+                // API配置检查
+                console.log('=== API配置检查 ===');
+                const currentApiKey = getApiKey();
+                const currentBotId = getBotId();
+                console.log('API密钥状态:', currentApiKey ? `已配置(长度: ${currentApiKey.length}, 前缀: ${currentApiKey.substring(0, 10)}...)` : '未配置');
+                console.log('机器人ID状态:', currentBotId ? `已配置(${currentBotId})` : '未配置');
+                console.log('配置完整性:', isApiConfigured() ? '完整' : '不完整');
+                
+                // 详细的错误分类和诊断
                 let errorMessage = 'API调用失败';
                 let diagnosticInfo = '';
+                let troubleshootingSteps = [];
                 
-                if (error.message.includes('Failed to fetch')) {
-                    errorMessage = 'API调用失败：网络连接错误或CORS问题';
-                    diagnosticInfo = '可能原因：网络连接问题、CORS策略限制、或API服务不可用';
-                } else if (error.message.includes('401')) {
-                    errorMessage = 'API调用失败：API密钥无效或已过期';
-                    diagnosticInfo = '请检查API密钥是否正确配置且未过期';
-                } else if (error.message.includes('403')) {
-                    errorMessage = 'API调用失败：权限不足或机器人ID无效';
-                    diagnosticInfo = '请确认机器人ID正确且API密钥有访问权限';
-                } else if (error.message.includes('429')) {
-                    errorMessage = 'API调用失败：请求频率过高，请稍后重试';
-                    diagnosticInfo = '请等待一段时间后重试，或检查API配额限制';
-                } else if (error.message.includes('500')) {
-                    errorMessage = 'API调用失败：服务器内部错误';
-                    diagnosticInfo = '这是服务器端问题，请稍后重试';
+                if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+                    errorMessage = 'API调用失败：网络连接错误';
+                    diagnosticInfo = '无法连接到Coze API服务器';
+                    troubleshootingSteps = [
+                        '1. 检查网络连接是否正常',
+                        '2. 确认防火墙或代理设置',
+                        '3. 验证API服务器是否可访问',
+                        '4. 检查CORS策略配置'
+                    ];
+                } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
+                    errorMessage = 'API调用失败：身份验证失败';
+                    diagnosticInfo = 'API密钥无效或已过期';
+                    troubleshootingSteps = [
+                        '1. 检查API密钥是否正确',
+                        '2. 确认API密钥未过期',
+                        '3. 验证API密钥权限范围',
+                        '4. 重新生成API密钥'
+                    ];
+                } else if (error.message.includes('403') || error.message.includes('Forbidden')) {
+                    errorMessage = 'API调用失败：权限不足';
+                    diagnosticInfo = '机器人ID无效或API密钥无访问权限';
+                    troubleshootingSteps = [
+                        '1. 确认机器人ID正确',
+                        '2. 检查API密钥权限',
+                        '3. 验证机器人状态是否正常',
+                        '4. 确认账户余额充足'
+                    ];
+                } else if (error.message.includes('429') || error.message.includes('Too Many Requests')) {
+                    errorMessage = 'API调用失败：请求频率过高';
+                    diagnosticInfo = '触发了API速率限制';
+                    troubleshootingSteps = [
+                        '1. 等待一段时间后重试',
+                        '2. 检查API配额使用情况',
+                        '3. 优化请求频率',
+                        '4. 考虑升级API套餐'
+                    ];
+                } else if (error.message.includes('500') || error.message.includes('502') || error.message.includes('503')) {
+                    errorMessage = 'API调用失败：服务器错误';
+                    diagnosticInfo = 'Coze API服务器出现问题';
+                    troubleshootingSteps = [
+                        '1. 稍后重试请求',
+                        '2. 检查Coze服务状态',
+                        '3. 联系技术支持',
+                        '4. 使用备用方案'
+                    ];
+                } else if (error.message.includes('未获取到chat_id')) {
+                    errorMessage = 'API调用失败：响应格式异常';
+                    diagnosticInfo = '初始请求未返回有效的chat_id';
+                    troubleshootingSteps = [
+                        '1. 检查请求参数格式',
+                        '2. 验证机器人配置',
+                        '3. 确认API版本兼容性',
+                        '4. 查看详细响应日志'
+                    ];
+                } else if (error.message.includes('对话处理失败') || error.message.includes('对话被取消')) {
+                    errorMessage = 'API调用失败：对话处理异常';
+                    diagnosticInfo = '机器人处理过程中出现问题';
+                    troubleshootingSteps = [
+                        '1. 检查输入内容是否合规',
+                        '2. 验证机器人配置',
+                        '3. 重试请求',
+                        '4. 联系技术支持'
+                    ];
+                } else if (error.message.includes('对话处理超时')) {
+                    errorMessage = 'API调用失败：处理超时';
+                    diagnosticInfo = '机器人响应时间过长';
+                    troubleshootingSteps = [
+                        '1. 简化输入内容',
+                        '2. 重试请求',
+                        '3. 检查机器人性能',
+                        '4. 增加超时时间'
+                    ];
                 } else {
-                    diagnosticInfo = '未知错误类型，请查看控制台详细信息';
+                    diagnosticInfo = '未知错误类型';
+                    troubleshootingSteps = [
+                        '1. 查看浏览器控制台详细信息',
+                        '2. 检查网络连接',
+                        '3. 验证API配置',
+                        '4. 联系技术支持'
+                    ];
                 }
                 
-                console.log('=== 详细诊断信息 ===');
-                console.log('API配置状态:', {
-                    apiKey: getApiKey() ? `已配置(${getApiKey().substring(0, 10)}...)` : '未配置',
-                    botId: getBotId() ? `已配置(${getBotId()})` : '未配置',
-                    isConfigured: isApiConfigured()
-                });
-                console.log('错误类型:', error.name);
-                console.log('错误消息:', error.message);
-                console.log('诊断建议:', diagnosticInfo);
+                console.log('=== 错误诊断结果 ===');
+                console.log('错误分类:', errorMessage);
+                console.log('问题描述:', diagnosticInfo);
+                console.log('排查步骤:', troubleshootingSteps);
                 console.log('=== 诊断信息结束 ===');
                 
                 // 显示用户友好的错误信息
