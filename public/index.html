@@ -1332,11 +1332,17 @@
                                             console.log('累积内容:', generatedText);
                                             
                                             // 实时更新显示内容
-                                            const outputElement = document.getElementById('generated-content');
+                                            const outputElement = document.getElementById('generatedContainer');
                                             if (outputElement) {
-                                                outputElement.textContent = generatedText;
-                                                outputElement.style.height = 'auto';
-                                                outputElement.style.height = outputElement.scrollHeight + 'px';
+                                                // 创建pre元素来正确显示格式化文本
+                                                const preElement = document.createElement('pre');
+                                                preElement.className = 'whitespace-pre-wrap font-sans';
+                                                preElement.textContent = generatedText;
+                                                outputElement.innerHTML = '';
+                                                outputElement.appendChild(preElement);
+                                                
+                                                // 动态调整高度
+                                                adjustGeneratedContainerHeight();
                                             }
                                         }
                                     }
@@ -1362,8 +1368,8 @@
                 }
                 
                 // 最终显示生成的内容（如果流式处理中没有实时更新）
-                const outputElement = document.getElementById('generated-content');
-                if (outputElement && outputElement.textContent !== generatedText) {
+                const currentContent = generatedContainer.textContent || generatedContainer.innerText || '';
+                if (currentContent.trim() !== generatedText.trim()) {
                     const preElement = document.createElement('pre');
                     preElement.className = 'whitespace-pre-wrap font-sans';
                     preElement.textContent = generatedText;
