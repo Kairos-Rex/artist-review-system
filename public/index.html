@@ -1272,40 +1272,34 @@
                 
                 let generatedText = '';
                 
-                // 根据扣子API v2的实际响应结构提取内容
-                if (data && data.messages && data.messages.length > 0) {
-                    // v3版本：查找最后一条assistant消息
-                    const assistantMessages = data.messages.filter(msg => 
-                        msg.role === 'assistant' && 
-                        msg.content && 
-                        msg.content.trim() !== '' &&
-                        !msg.content.startsWith('{') && 
-                        !msg.content.startsWith('RPCError')
-                    );
+                // 使用改进的API响应处理逻辑
+                const messages = data.messages || (data.data && data.data.messages) || [];
+                console.log('找到消息数量:', messages.length);
+                
+                if (messages.length > 0) {
+                    // 查找assistant消息，使用更宽松的过滤条件
+                    const assistantMessages = messages.filter(msg => {
+                        const isAssistant = msg.role === 'assistant';
+                        const hasContent = msg.content && typeof msg.content === 'string' && msg.content.trim() !== '';
+                        console.log(`生成话术 - 消息检查 - 角色: ${msg.role}, 有内容: ${hasContent}, 内容: "${msg.content}"`);
+                        return isAssistant && hasContent;
+                    });
+                    
+                    console.log('找到assistant消息数量:', assistantMessages.length);
                     
                     if (assistantMessages.length > 0) {
                         // 取最后一条有效的assistant回复
                         generatedText = assistantMessages[assistantMessages.length - 1].content;
-                    }
-                } else if (data && data.data && data.data.messages && data.data.messages.length > 0) {
-                    // 备用：检查data.data.messages结构（兼容其他版本）
-                    const assistantMessages = data.data.messages.filter(msg => 
-                        msg.role === 'assistant' && 
-                        msg.content && 
-                        msg.content.trim() !== '' &&
-                        !msg.content.startsWith('{') && 
-                        !msg.content.startsWith('RPCError')
-                    );
-                    
-                    if (assistantMessages.length > 0) {
-                        generatedText = assistantMessages[assistantMessages.length - 1].content;
+                        console.log('使用的生成内容:', generatedText);
                     }
                 } else if (data && data.content) {
                     // 备用：直接从content字段获取
                     generatedText = data.content;
+                    console.log('从content字段获取内容:', generatedText);
                 } else if (data && data.text) {
                     // 备用：从text字段获取
                     generatedText = data.text;
+                    console.log('从text字段获取内容:', generatedText);
                 }
                 
                 console.log('提取的生成文本:', generatedText);
@@ -2283,33 +2277,36 @@
                         // 检查API响应是否包含有效内容
                         let hasValidResponse = false;
                         let responseContent = '';
+                        let debugInfo = '';
                         
-                        if (data && data.messages && data.messages.length > 0) {
-                            const assistantMessages = data.messages.filter(msg => 
-                                msg.role === 'assistant' && 
-                                msg.content && 
-                                msg.content.trim() !== '' &&
-                                !msg.content.startsWith('{') && 
-                                !msg.content.startsWith('RPCError')
-                            );
+                        // 获取消息数组
+                        const messages = data.messages || (data.data && data.data.messages) || [];
+                        console.log('找到消息数量:', messages.length);
+                        
+                        if (messages.length > 0) {
+                            // 查找assistant消息，使用更宽松的过滤条件
+                            const assistantMessages = messages.filter(msg => {
+                                const isAssistant = msg.role === 'assistant';
+                                const hasContent = msg.content && typeof msg.content === 'string' && msg.content.trim() !== '';
+                                console.log(`消息检查 - 角色: ${msg.role}, 有内容: ${hasContent}, 内容: "${msg.content}"`);
+                                return isAssistant && hasContent;
+                            });
+                            
+                            console.log('找到assistant消息数量:', assistantMessages.length);
                             
                             if (assistantMessages.length > 0) {
                                 hasValidResponse = true;
                                 responseContent = assistantMessages[0].content;
+                                console.log('使用的回复内容:', responseContent);
+                            } else {
+                                // 如果没有找到assistant消息，提供调试信息
+                                debugInfo = `找到 ${messages.length} 条消息，但没有有效的assistant回复。`;
+                                if (messages.length > 0) {
+                                    debugInfo += ` 消息角色: ${messages.map(m => m.role).join(', ')}`;
+                                }
                             }
-                        } else if (data && data.data && data.data.messages && data.data.messages.length > 0) {
-                            const assistantMessages = data.data.messages.filter(msg => 
-                                msg.role === 'assistant' && 
-                                msg.content && 
-                                msg.content.trim() !== '' &&
-                                !msg.content.startsWith('{') && 
-                                !msg.content.startsWith('RPCError')
-                            );
-                            
-                            if (assistantMessages.length > 0) {
-                                hasValidResponse = true;
-                                responseContent = assistantMessages[0].content;
-                            }
+                        } else {
+                            debugInfo = '响应中没有找到消息数组。';
                         }
                         
                         if (hasValidResponse) {
@@ -2317,7 +2314,7 @@
                             testResult.innerHTML = `<i class="fa fa-check-circle mr-1"></i>API连接测试成功！机器人回复："${responseContent.substring(0, 50)}${responseContent.length > 50 ? '...' : ''}"`;
                         } else {
                             testResult.className = 'mt-2 text-sm text-yellow-600';
-                            testResult.innerHTML = '<i class="fa fa-exclamation-triangle mr-1"></i>API连接成功，但未获取到有效回复内容。请检查机器人配置。';
+                            testResult.innerHTML = `<i class="fa fa-exclamation-triangle mr-1"></i>API连接成功，但未获取到有效回复内容。${debugInfo} <a href="debug-api.html" target="_blank" style="color: #007bff; text-decoration: underline;">点击这里使用详细诊断工具</a>`;
                         }
                     } else {
                         const errorText = await response.text();

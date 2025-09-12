@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API调试工具 - 扣子机器人诊断</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .result-box {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #e1e5e9;
+            background: #f8f9fa;
+        }
+        
+        .success {
+            border-color: #28a745;
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .error {
+            border-color: #dc3545;
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .warning {
+            border-color: #ffc107;
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .info {
+            border-color: #17a2b8;
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .json-viewer {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            margin-top: 10px;
+        }
+        
+        .diagnostic-item {
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #667eea;
+            background: #f8f9fa;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .diagnostic-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .diagnostic-content {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-bug"></i> API调试工具</h1>
+            <p>诊断扣子机器人API连接问题</p>
+        </div>
+        
+        <div class="content">
+            <div class="form-group">
+                <label for="apiKey">API密钥:</label>
+                <input type="password" id="apiKey" placeholder="请输入您的扣子API密钥">
+            </div>
+            
+            <div class="form-group">
+                <label for="botId">机器人ID:</label>
+                <input type="text" id="botId" placeholder="请输入机器人ID">
+            </div>
+            
+            <div class="form-group">
+                <label for="testMessage">测试消息:</label>
+                <textarea id="testMessage" rows="3" placeholder="输入要发送给机器人的测试消息">你好，请回复一条简单的消息</textarea>
+            </div>
+            
+            <button class="btn" id="testBtn" onclick="testAPI()">开始诊断</button>
+            <button class="btn" onclick="clearResults()">清除结果</button>
+            
+            <div id="results"></div>
+        </div>
+    </div>
+    
+    <script>
+        function addResult(title, content, type = 'info') {
+            const results = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `result-box ${type}`;
+            resultDiv.innerHTML = `
+                <h4><i class="fas fa-${getIcon(type)}"></i> ${title}</h4>
+                <div>${content}</div>
+            `;
+            results.appendChild(resultDiv);
+        }
+        
+        function getIcon(type) {
+            const icons = {
+                success: 'check-circle',
+                error: 'times-circle',
+                warning: 'exclamation-triangle',
+                info: 'info-circle'
+            };
+            return icons[type] || 'info-circle';
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        function formatJSON(obj) {
+            return `<div class="json-viewer">${JSON.stringify(obj, null, 2)}</div>`;
+        }
+        
+        async function testAPI() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const botId = document.getElementById('botId').value.trim();
+            const testMessage = document.getElementById('testMessage').value.trim();
+            const testBtn = document.getElementById('testBtn');
+            
+            clearResults();
+            
+            // 验证输入
+            if (!apiKey) {
+                addResult('输入验证失败', 'API密钥不能为空', 'error');
+                return;
+            }
+            
+            if (!botId) {
+                addResult('输入验证失败', '机器人ID不能为空', 'error');
+                return;
+            }
+            
+            if (!testMessage) {
+                addResult('输入验证失败', '测试消息不能为空', 'error');
+                return;
+            }
+            
+            testBtn.disabled = true;
+            testBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 诊断中...';
+            
+            addResult('开始诊断', '正在测试API连接...', 'info');
+            
+            try {
+                // 构建请求
+                const requestBody = {
+                    bot_id: botId,
+                    user_id: '123123',
+                    stream: false,
+                    auto_save_history: true,
+                    additional_messages: [
+                        {
+                            role: 'user',
+                            content: testMessage,
+                            content_type: 'text'
+                        }
+                    ]
+                };
+                
+                addResult('请求信息', `
+                    <div class="diagnostic-item">
+                        <div class="diagnostic-title">请求URL:</div>
+                        <div class="diagnostic-content">https://api.coze.cn/v3/chat</div>
+                    </div>
+                    <div class="diagnostic-item">
+                        <div class="diagnostic-title">请求方法:</div>
+                        <div class="diagnostic-content">POST</div>
+                    </div>
+                    <div class="diagnostic-item">
+                        <div class="diagnostic-title">请求头:</div>
+                        <div class="diagnostic-content">
+                            Content-Type: application/json<br>
+                            Authorization: Bearer ${apiKey.substring(0, 10)}...
+                        </div>
+                    </div>
+                    <div class="diagnostic-item">
+                        <div class="diagnostic-title">请求体:</div>
+                        <div class="diagnostic-content">${formatJSON(requestBody)}</div>
+                    </div>
+                `, 'info');
+                
+                const response = await fetch('https://api.coze.cn/v3/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                addResult('响应状态', `
+                    <div class="diagnostic-item">
+                        <div class="diagnostic-title">HTTP状态码:</div>
+                        <div class="diagnostic-content">${response.status} ${response.statusText}</div>
+                    </div>
+                    <div class="diagnostic-item">
+                        <div class="diagnostic-title">响应头:</div>
+                        <div class="diagnostic-content">
+                            ${Array.from(response.headers.entries()).map(([key, value]) => `${key}: ${value}`).join('<br>')}
+                        </div>
+                    </div>
+                `, response.ok ? 'success' : 'error');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    addResult('完整API响应', formatJSON(data), 'info');
+                    
+                    // 分析响应结构
+                    let analysisContent = '<div class="diagnostic-item">';
+                    
+                    if (data.messages) {
+                        analysisContent += `
+                            <div class="diagnostic-title">消息数组 (data.messages):</div>
+                            <div class="diagnostic-content">找到 ${data.messages.length} 条消息</div>
+                        `;
+                        
+                        data.messages.forEach((msg, index) => {
+                            analysisContent += `
+                                <div style="margin: 10px 0; padding: 10px; background: #e9ecef; border-radius: 5px;">
+                                    <strong>消息 ${index + 1}:</strong><br>
+                                    角色: ${msg.role}<br>
+                                    内容: ${msg.content ? msg.content.substring(0, 100) + (msg.content.length > 100 ? '...' : '') : '(空)'}<br>
+                                    内容类型: ${msg.content_type || '未指定'}
+                                </div>
+                            `;
+                        });
+                    } else if (data.data && data.data.messages) {
+                        analysisContent += `
+                            <div class="diagnostic-title">消息数组 (data.data.messages):</div>
+                            <div class="diagnostic-content">找到 ${data.data.messages.length} 条消息</div>
+                        `;
+                        
+                        data.data.messages.forEach((msg, index) => {
+                            analysisContent += `
+                                <div style="margin: 10px 0; padding: 10px; background: #e9ecef; border-radius: 5px;">
+                                    <strong>消息 ${index + 1}:</strong><br>
+                                    角色: ${msg.role}<br>
+                                    内容: ${msg.content ? msg.content.substring(0, 100) + (msg.content.length > 100 ? '...' : '') : '(空)'}<br>
+                                    内容类型: ${msg.content_type || '未指定'}
+                                </div>
+                            `;
+                        });
+                    } else {
+                        analysisContent += `
+                            <div class="diagnostic-title">消息数组:</div>
+                            <div class="diagnostic-content">未找到消息数组</div>
+                        `;
+                    }
+                    
+                    analysisContent += '</div>';
+                    addResult('响应结构分析', analysisContent, 'info');
+                    
+                    // 检查过滤条件
+                    let filterAnalysis = '';
+                    let validMessages = [];
+                    
+                    const messagesToCheck = data.messages || (data.data && data.data.messages) || [];
+                    
+                    messagesToCheck.forEach((msg, index) => {
+                        if (msg.role === 'assistant') {
+                            const checks = {
+                                '有内容': msg.content && msg.content.trim() !== '',
+                                '不以{开头': msg.content && !msg.content.startsWith('{'),
+                                '不以RPCError开头': msg.content && !msg.content.startsWith('RPCError')
+                            };
+                            
+                            const passed = Object.values(checks).every(check => check);
+                            
+                            filterAnalysis += `
+                                <div style="margin: 10px 0; padding: 10px; background: ${passed ? '#d4edda' : '#f8d7da'}; border-radius: 5px;">
+                                    <strong>Assistant消息 ${index + 1}:</strong><br>
+                                    内容: "${msg.content || '(空)'}"<br>
+                                    过滤检查:
+                                    <ul>
+                                        ${Object.entries(checks).map(([name, result]) => 
+                                            `<li style="color: ${result ? 'green' : 'red'}">${name}: ${result ? '✓' : '✗'}</li>`
+                                        ).join('')}
+                                    </ul>
+                                    结果: ${passed ? '✓ 通过过滤' : '✗ 被过滤'}
+                                </div>
+                            `;
+                            
+                            if (passed) {
+                                validMessages.push(msg);
+                            }
+                        }
+                    });
+                    
+                    addResult('过滤条件检查', filterAnalysis || '未找到assistant角色的消息', validMessages.length > 0 ? 'success' : 'warning');
+                    
+                    // 最终诊断结果
+                    if (validMessages.length > 0) {
+                        addResult('诊断结果', `
+                            <div class="diagnostic-item">
+                                <div class="diagnostic-title">✓ API连接正常</div>
+                                <div class="diagnostic-content">找到 ${validMessages.length} 条有效的机器人回复</div>
+                            </div>
+                            <div class="diagnostic-item">
+                                <div class="diagnostic-title">机器人回复内容:</div>
+                                <div class="diagnostic-content">"${validMessages[0].content}"</div>
+                            </div>
+                        `, 'success');
+                    } else {
+                        addResult('诊断结果', `
+                            <div class="diagnostic-item">
+                                <div class="diagnostic-title">⚠ API连接成功，但未获取到有效回复</div>
+                                <div class="diagnostic-content">可能的原因:</div>
+                                <ul>
+                                    <li>机器人配置有问题，无法正常回复</li>
+                                    <li>机器人回复的内容被过滤条件过滤掉了</li>
+                                    <li>机器人回复格式不符合预期</li>
+                                    <li>机器人需要更多上下文才能回复</li>
+                                </ul>
+                            </div>
+                            <div class="diagnostic-item">
+                                <div class="diagnostic-title">建议解决方案:</div>
+                                <div class="diagnostic-content">
+                                    <ol>
+                                        <li>检查机器人在扣子平台的配置是否正确</li>
+                                        <li>尝试不同的测试消息</li>
+                                        <li>确认机器人有足够的知识库或指令</li>
+                                        <li>检查机器人是否需要特定的触发词</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        `, 'warning');
+                    }
+                    
+                } else {
+                    const errorText = await response.text();
+                    
+                    let errorAnalysis = '';
+                    if (response.status === 401) {
+                        errorAnalysis = 'API密钥无效或已过期。请检查密钥是否正确。';
+                    } else if (response.status === 403) {
+                        errorAnalysis = '权限不足或机器人ID无效。请检查机器人ID是否正确，以及API密钥是否有访问该机器人的权限。';
+                    } else if (response.status === 429) {
+                        errorAnalysis = '请求频率过高。请稍后重试。';
+                    } else if (response.status >= 500) {
+                        errorAnalysis = '服务器内部错误。这通常是临时问题，请稍后重试。';
+                    } else {
+                        errorAnalysis = '未知错误。请检查网络连接和API配置。';
+                    }
+                    
+                    addResult('错误分析', `
+                        <div class="diagnostic-item">
+                            <div class="diagnostic-title">错误原因:</div>
+                            <div class="diagnostic-content">${errorAnalysis}</div>
+                        </div>
+                        <div class="diagnostic-item">
+                            <div class="diagnostic-title">错误响应:</div>
+                            <div class="diagnostic-content">${errorText}</div>
+                        </div>
+                    `, 'error');
+                }
+                
+            } catch (error) {
+                addResult('网络错误', `
+                    <div class="diagnostic-item">
+                        <div class="diagnostic-title">错误类型:</div>
+                        <div class="diagnostic-content">${error.name}</div>
+                    </div>
+                    <div class="diagnostic-item">
+                        <div class="diagnostic-title">错误消息:</div>
+                        <div class="diagnostic-content">${error.message}</div>
+                    </div>
+                    <div class="diagnostic-item">
+                        <div class="diagnostic-title">可能原因:</div>
+                        <div class="diagnostic-content">
+                            <ul>
+                                <li>网络连接问题</li>
+                                <li>CORS跨域问题</li>
+                                <li>防火墙阻止请求</li>
+                                <li>API服务不可用</li>
+                            </ul>
+                        </div>
+                    </div>
+                `, 'error');
+            } finally {
+                testBtn.disabled = false;
+                testBtn.innerHTML = '开始诊断';
+            }
+        }
+    </script>
+</body>
+</html>
