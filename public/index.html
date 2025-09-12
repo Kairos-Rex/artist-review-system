@@ -1312,8 +1312,12 @@
                     console.log('使用API生成的内容');
                 }
                 
-                // 显示生成的内容
-                generatedContainer.innerHTML = `<pre class="whitespace-pre-wrap font-sans">${generatedText}</pre>`;
+                // 显示生成的内容 - 使用textContent避免HTML注入
+                const preElement = document.createElement('pre');
+                preElement.className = 'whitespace-pre-wrap font-sans';
+                preElement.textContent = generatedText;
+                generatedContainer.innerHTML = '';
+                generatedContainer.appendChild(preElement);
                 
                 // 动态调整生成文本框高度
                 adjustGeneratedContainerHeight();
@@ -1344,9 +1348,14 @@
                 });
                 
                 // 如果API调用失败，提供备用内容
-                const fallbackText = `【优化后的话术】\n\n${inputText.trim()}\n\n经过AI优化，以上话术在以下方面得到了改进：\n1. 语言表达更加专业和礼貌\n2. 逻辑结构更加清晰\n3. 说服力和感染力得到增强\n4. 符合现代商务沟通标准\n\n建议在实际使用时根据具体情况进行微调。\n\n注意：${errorMessage}，当前使用备用生成模式。`;
+                const fallbackText = `【优化后的话术】\n\n${inputText.trim()}\n\n经过AI优化，以上话术在以下方面得到了改进：\n1. 语言表达更加专业和礼貌\n2. 逻辑结构更加清晰\n3. 说服力和感染力得到增强\n4. 符合现代商务沟通标准\n\n建议在实际使用时根据具体情况进行微调。\n\n注意：API调用失败，当前使用备用生成模式。`;
                 
-                generatedContainer.innerHTML = `<pre class="whitespace-pre-wrap font-sans">${fallbackText}</pre>`;
+                // 使用相同的方式显示备用内容
+                const fallbackPreElement = document.createElement('pre');
+                fallbackPreElement.className = 'whitespace-pre-wrap font-sans';
+                fallbackPreElement.textContent = fallbackText;
+                generatedContainer.innerHTML = '';
+                generatedContainer.appendChild(fallbackPreElement);
                 adjustGeneratedContainerHeight();
                 
                 showNotification(errorMessage + '，已使用备用模式', 'warning');
