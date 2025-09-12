@@ -386,9 +386,12 @@
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-2">
                     <h3 class="text-lg font-semibold">话术生成</h3>
-                    <button id="generateBtn" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg shadow btn-hover flex items-center gap-1 btn-text-nowrap text-sm">
-                        <i class="fa fa-magic"></i> 生成话术
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <span id="charCount" class="text-sm text-gray-500">0 字</span>
+                        <button id="generateBtn" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg shadow btn-hover flex items-center gap-1 btn-text-nowrap text-sm">
+                            <i class="fa fa-magic"></i> 生成话术
+                        </button>
+                    </div>
                 </div>
                 <div id="generatedContainer" class="result-container-adaptive px-3 py-2 border border-gray-200 rounded-lg bg-white min-h-[45px] overflow-y-auto" style="max-height: none; height: auto; min-height: 45px;">
                     <p class="text-neutral italic">点击"生成话术"按钮，AI将为您生成优化的话术内容...</p>
@@ -1526,6 +1529,9 @@
                 // 动态调整生成文本框高度
                 adjustGeneratedContainerHeight();
                 
+                // 更新字数统计
+                updateCharCount();
+                
                 showNotification('话术生成成功！', 'success');
                 
             } catch (error) {
@@ -1655,6 +1661,9 @@
                 generatedContainer.appendChild(fallbackPreElement);
                 adjustGeneratedContainerHeight();
                 
+                // 更新字数统计
+                updateCharCount();
+                
                 showNotification(errorMessage + '，已使用备用模式', 'warning');
             } finally {
                 // 恢复按钮状态
@@ -1685,6 +1694,37 @@
             }
             
             generatedContainer.style.minHeight = minHeight + 'px';
+        }
+
+        // 更新字数统计
+        function updateCharCount() {
+            const generatedContainer = document.getElementById('generatedContainer');
+            const charCountElement = document.getElementById('charCount');
+            
+            if (!generatedContainer || !charCountElement) return;
+            
+            const text = generatedContainer.textContent || generatedContainer.innerText || '';
+            
+            // 过滤掉默认提示文本
+            if (text.includes('点击"生成话术"按钮') || text.includes('AI正在为您生成')) {
+                charCountElement.textContent = '0 字';
+                return;
+            }
+            
+            const charCount = text.trim().length;
+            charCountElement.textContent = `${charCount} 字`;
+            
+            // 根据字数添加颜色提示
+            charCountElement.className = 'text-sm';
+            if (charCount === 0) {
+                charCountElement.className += ' text-gray-500';
+            } else if (charCount < 100) {
+                charCountElement.className += ' text-green-600';
+            } else if (charCount < 500) {
+                charCountElement.className += ' text-blue-600';
+            } else {
+                charCountElement.className += ' text-orange-600';
+            }
         }
 
         // 复制生成的话术
@@ -2703,6 +2743,18 @@
             setTimeout(() => {
                 renderCategoryButtons();
             }, 100);
+            
+            // 初始化字数统计
+            updateCharCount();
+            
+            // 为生成文本框添加输入事件监听器
+            const generatedContainer = document.getElementById('generatedContainer');
+            if (generatedContainer) {
+                generatedContainer.addEventListener('input', updateCharCount);
+                generatedContainer.addEventListener('paste', function() {
+                    setTimeout(updateCharCount, 10); // 延迟更新以确保粘贴内容已处理
+                });
+            }
         });
     </script>
 </body>
