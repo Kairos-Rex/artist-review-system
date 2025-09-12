@@ -1232,7 +1232,7 @@
                 const requestBody = {
                     bot_id: botId,
                     user_id: userId, // 使用动态生成的唯一用户ID
-                    stream: false,
+                    stream: true,
                     auto_save_history: true,
                     additional_messages: [
                         {
@@ -2551,7 +2551,7 @@
                         body: JSON.stringify({
                             bot_id: botId,
                             user_id: '123123',
-                            stream: false,
+                            stream: true,
                             auto_save_history: true,
                             additional_messages: [
                                 {
