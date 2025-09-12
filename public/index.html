@@ -1296,7 +1296,21 @@
                     let errorMessage = `API调用失败: ${response.status} ${response.statusText}`;
                     
                     // 检查Coze特有的错误码
-                    if (errorData.code === 702242001) {
+                    if (errorData.code === 4100) {
+                        errorMessage += '\n🔍 Coze错误码 4100: 认证无效';
+                        errorMessage += '\n可能原因：';
+                        errorMessage += '\n  - API密钥已过期或无效';
+                        errorMessage += '\n  - API密钥格式错误';
+                        errorMessage += '\n  - 权限不足';
+                        errorMessage += '\n💡 建议：使用认证修复工具更新API配置';
+                        
+                        // 自动跳转到认证修复页面
+                        setTimeout(() => {
+                            if (confirm('检测到认证问题，是否跳转到认证修复页面？')) {
+                                window.open('/auth-fix.html', '_blank');
+                            }
+                        }, 2000);
+                    } else if (errorData.code === 702242001) {
                         errorMessage += '\n🔍 Coze错误码 702242001: 参数传递错误';
                         errorMessage += '\n可能原因：';
                         errorMessage += '\n  - 请求头不完整（缺少Content-Type或Authorization）';
