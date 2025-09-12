@@ -1242,12 +1242,12 @@
                 const requestBody = {
                     bot_id: botId,
                     user_id: userId, // 使用动态生成的唯一用户ID
-                    stream: true, // 启用流式对话
+                    stream: false,
                     auto_save_history: true,
                     additional_messages: [
                         {
                             role: 'user',
-                            content: `请优化以下话术内容，使其更加专业、礼貌和有说服力：\n\n${inputText.trim()}`,
+                            content: inputText.trim(),
                             content_type: 'text'
                         }
                     ]
@@ -1271,93 +1271,242 @@
                     body: JSON.stringify(requestBody)
                 });
                 
-                console.log('=== 流式API响应状态检查 ===');
+                console.log('=== API响应状态检查 ===');
                 console.log('响应状态码:', response.status);
                 console.log('响应状态文本:', response.statusText);
                 console.log('响应头信息:', Object.fromEntries(response.headers.entries()));
                 
                 if (!response.ok) {
                     const errorText = await response.text();
-                    console.error('流式API调用失败详情:', {
+                    console.error('API调用失败详情:', {
                         status: response.status,
                         statusText: response.statusText,
                         errorBody: errorText
                     });
                     
-                    let errorMessage = `流式API调用失败: ${response.status} ${response.statusText}`;
+                    // 尝试解析错误响应为JSON
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch (e) {
+                        errorData = { message: errorText };
+                    }
+                    
+                    // 根据状态码和Coze错误码提供具体的错误诊断
+                    let errorMessage = `API调用失败: ${response.status} ${response.statusText}`;
+                    
+                    // 检查Coze特有的错误码
+                    if (errorData.code === 702242001) {
+                        errorMessage += '\n🔍 Coze错误码 702242001: 参数传递错误';
+                        errorMessage += '\n可能原因：';
+                        errorMessage += '\n  - 请求头不完整（缺少Content-Type或Authorization）';
+                        errorMessage += '\n  - 请求体格式错误';
+                        errorMessage += '\n  - 必需参数缺失或格式不正确';
+                        errorMessage += '\n💡 建议：检查API密钥格式是否为 "Bearer pat_xxx"';
+                    } else if (response.status === 401) {
+                        errorMessage += '\n🔍 HTTP 401: 未授权访问';
+                        errorMessage += '\n可能原因：';
+                        errorMessage += '\n  - API密钥无效或已过期';
+                        errorMessage += '\n  - 密钥格式错误（应为 Bearer pat_xxx）';
+                        errorMessage += '\n💡 建议：重新生成Personal Access Token';
+                    } else if (response.status === 403) {
+                        errorMessage += '\n🔍 HTTP 403: 权限不足';
+                        errorMessage += '\n可能原因：';
+                        errorMessage += '\n  - PAT令牌缺少chat权限';
+                        errorMessage += '\n  - 机器人与令牌不在同一空间';
+                        errorMessage += '\n💡 建议：检查令牌权限设置';
+                    } else if (response.status === 404) {
+                        errorMessage += '\n🔍 HTTP 404: 资源不存在';
+                        errorMessage += '\n可能原因：';
+                        errorMessage += '\n  - 机器人ID不存在';
+                        errorMessage += '\n  - 机器人未发布为API服务';
+                        errorMessage += '\n💡 建议：确认机器人ID并检查发布状态';
+                    } else if (response.status === 429) {
+                        errorMessage += '\n🔍 HTTP 429: 请求过多';
+                        errorMessage += '\n可能原因：请求频率超过限制';
+                        errorMessage += '\n💡 建议：降低请求频率或稍后重试';
+                    } else if (response.status >= 500) {
+                        errorMessage += '\n🔍 HTTP 5xx: 服务器错误';
+                        errorMessage += '\n可能原因：Coze服务器内部错误';
+                        errorMessage += '\n💡 建议：稍后重试或联系技术支持';
+                    }
+                    
                     errorMessage += `\n\n📋 完整错误信息: ${errorText}`;
+                    errorMessage += '\n\n🔧 使用错误排查工具: coze-error-debug.html';
                     throw new Error(errorMessage);
                 }
                 
-                // 流式处理逻辑
-                console.log('=== 开始处理流式响应 ===');
+                const data = await response.json();
                 
-                let generatedText = '';
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
+                // 详细记录API响应用于调试
+                console.log('=== Coze API v3 调用流程开始 ===');
+                console.log('步骤1 - 发起对话请求成功');
+                console.log('完整响应数据:', JSON.stringify(data, null, 2));
+                console.log('响应数据结构检查:', {
+                    hasCode: 'code' in data,
+                    code: data.code,
+                    hasMsg: 'msg' in data,
+                    msg: data.msg,
+                    hasData: 'data' in data,
+                    dataType: typeof data.data
+                });
                 
-                try {
-                    while (true) {
-                        const { done, value } = await reader.read();
-                        
-                        if (done) {
-                            console.log('流式响应结束');
-                            break;
-                        }
-                        
-                        const chunk = decoder.decode(value, { stream: true });
-                        console.log('接收到数据块:', chunk);
-                        
-                        // 处理Server-Sent Events格式的数据
-                        const lines = chunk.split('\n');
-                        
-                        for (const line of lines) {
-                            if (line.startsWith('data: ')) {
-                                const dataStr = line.slice(6); // 移除'data: '前缀
-                                
-                                if (dataStr === '[DONE]') {
-                                    console.log('流式传输完成');
-                                    break;
-                                }
-                                
-                                try {
-                                    const data = JSON.parse(dataStr);
-                                    console.log('解析的流式数据:', data);
-                                    
-                                    // 根据Coze流式API格式处理数据
-                                    if (data.event === 'conversation.message.delta') {
-                                        const delta = data.data;
-                                        if (delta && delta.role === 'assistant' && delta.type === 'answer' && delta.content) {
-                                            generatedText += delta.content;
-                                            console.log('累积内容:', generatedText);
-                                            
-                                            // 实时更新显示内容
-                                            const outputElement = document.getElementById('generatedContainer');
-                                            if (outputElement) {
-                                                // 创建pre元素来正确显示格式化文本
-                                                const preElement = document.createElement('pre');
-                                                preElement.className = 'whitespace-pre-wrap font-sans';
-                                                preElement.textContent = generatedText;
-                                                outputElement.innerHTML = '';
-                                                outputElement.appendChild(preElement);
-                                                
-                                                // 动态调整高度
-                                                adjustGeneratedContainerHeight();
-                                            }
-                                        }
-                                    }
-                                } catch (parseError) {
-                                    console.warn('解析流式数据失败:', parseError, '原始数据:', dataStr);
-                                }
-                            }
-                        }
-                    }
-                } finally {
-                    reader.releaseLock();
+                // 根据Coze API文档，非流式调用需要三步：
+                // 1. 发起对话请求（当前步骤）- 返回chat_id
+                // 2. 轮询对话状态 - 等待completed
+                // 3. 获取对话消息 - 获取最终结果
+                
+                if (!data.data || !data.data.id) {
+                    throw new Error('未获取到chat_id，API响应格式异常');
                 }
                 
-                console.log('=== 流式响应处理完成 ===');
-                console.log('最终累积的内容:', generatedText);
+                const chatId = data.data.id;
+                const conversationId = data.data.conversation_id;
+                console.log('获取到chat_id:', chatId);
+                console.log('会话ID:', conversationId);
+                
+                // 步骤2: 轮询对话状态
+                console.log('步骤2 - 开始轮询对话状态...');
+                let chatStatus = 'in_progress';
+                let pollCount = 0;
+                const maxPolls = 30; // 最多轮询30次，避免无限等待
+                
+                while (chatStatus === 'in_progress' && pollCount < maxPolls) {
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒
+                    pollCount++;
+                    
+                    const statusResponse = await fetch(`https://api.coze.cn/v3/chat/retrieve?conversation_id=${conversationId}&chat_id=${chatId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`
+                        }
+                    });
+                    
+                    if (!statusResponse.ok) {
+                        throw new Error(`状态查询失败: ${statusResponse.status}`);
+                    }
+                    
+                    const statusData = await statusResponse.json();
+                    chatStatus = statusData.data.status;
+                    console.log(`轮询第${pollCount}次，状态: ${chatStatus}`);
+                    
+                    if (chatStatus === 'failed') {
+                        throw new Error('对话处理失败');
+                    }
+                    if (chatStatus === 'cancelled') {
+                        throw new Error('对话被取消');
+                    }
+                }
+                
+                if (chatStatus !== 'completed') {
+                    throw new Error('对话处理超时，请稍后重试');
+                }
+                
+                console.log('步骤3 - 对话完成，获取消息内容...');
+                
+                // 步骤3: 获取对话消息
+                const messagesResponse = await fetch(`https://api.coze.cn/v3/chat/message/list?conversation_id=${conversationId}&chat_id=${chatId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`
+                    }
+                });
+                
+                if (!messagesResponse.ok) {
+                    throw new Error(`消息获取失败: ${messagesResponse.status}`);
+                }
+                
+                const messagesData = await messagesResponse.json();
+                console.log('=== 消息响应数据验证 ===');
+                console.log('完整响应数据:', JSON.stringify(messagesData, null, 2));
+                console.log('响应数据类型:', typeof messagesData);
+                console.log('响应状态码:', messagesResponse.status);
+                console.log('响应头信息:', Object.fromEntries(messagesResponse.headers.entries()));
+                
+                // 验证响应数据结构
+                if (!messagesData || typeof messagesData !== 'object') {
+                    throw new Error('消息响应数据格式无效：不是有效的JSON对象');
+                }
+                
+                console.log('是否有data字段:', 'data' in messagesData);
+                console.log('data字段类型:', typeof messagesData.data);
+                console.log('data是否为数组:', Array.isArray(messagesData.data));
+                
+                if (messagesData.data) {
+                    console.log('data数组长度:', messagesData.data.length);
+                    if (messagesData.data.length > 0) {
+                        console.log('第一条消息结构:', messagesData.data[0]);
+                    }
+                } else {
+                    console.warn('警告：响应中没有data字段');
+                    console.log('可用字段:', Object.keys(messagesData));
+                }
+                
+                let generatedText = '';
+                
+                // 解析Coze API的消息格式
+                if (messagesData.data && Array.isArray(messagesData.data)) {
+                    console.log('=== 解析Coze消息数组 ===');
+                    console.log('消息总数:', messagesData.data.length);
+                    
+                    // 显示所有消息的详细信息
+                    messagesData.data.forEach((msg, index) => {
+                        console.log(`消息${index + 1}详情:`, {
+                            id: msg.id,
+                            role: msg.role,
+                            type: msg.type,
+                            content_type: msg.content_type,
+                            content: msg.content,
+                            chat_id: msg.chat_id
+                        });
+                    });
+                    
+                    // 根据Coze API文档，查找type=answer且content_type=text的智能体回复
+                    const textAnswerMessages = messagesData.data.filter(msg => 
+                        msg.role === 'assistant' && 
+                        msg.type === 'answer' && 
+                        msg.content_type === 'text'
+                    );
+                    
+                    console.log('找到文本格式智能体回复数量:', textAnswerMessages.length);
+                    
+                    if (textAnswerMessages.length > 0) {
+                        // 合并所有文本回复内容
+                        generatedText = textAnswerMessages.map(msg => msg.content).join('\n');
+                        console.log('提取的智能体回复内容:', generatedText);
+                    } else {
+                        // 如果没有找到标准的文本回复，尝试查找其他类型的assistant消息
+                        const allAssistantMessages = messagesData.data.filter(msg => 
+                            msg.role === 'assistant'
+                        );
+                        
+                        console.log('所有assistant消息数量:', allAssistantMessages.length);
+                        
+                        if (allAssistantMessages.length > 0) {
+                            // 优先选择answer类型的消息
+                            const answerMessages = allAssistantMessages.filter(msg => msg.type === 'answer');
+                            if (answerMessages.length > 0) {
+                                generatedText = answerMessages.map(msg => msg.content).join('\n');
+                                console.log('使用answer类型消息:', generatedText);
+                            } else {
+                                // 如果没有answer类型，使用第一个assistant消息
+                                generatedText = allAssistantMessages[0].content;
+                                console.log('使用第一个assistant消息:', generatedText);
+                            }
+                        } else {
+                            console.error('未找到任何assistant角色的消息');
+                            throw new Error('未找到有效的智能体回复');
+                        }
+                    }
+                } else {
+                    console.error('消息数据格式异常:', messagesData);
+                    throw new Error('消息数据格式异常');
+                }
+                
+                console.log('=== API响应解析结束 ===');
+                console.log('最终提取的内容:', generatedText);
+                
+                console.log('提取的生成文本:', generatedText);
                 
                 // 如果API返回内容为空，使用备用内容
                 if (!generatedText || generatedText.trim() === '') {
@@ -1367,18 +1516,15 @@
                     console.log('使用API生成的内容');
                 }
                 
-                // 最终显示生成的内容（如果流式处理中没有实时更新）
-                const currentContent = generatedContainer.textContent || generatedContainer.innerText || '';
-                if (currentContent.trim() !== generatedText.trim()) {
-                    const preElement = document.createElement('pre');
-                    preElement.className = 'whitespace-pre-wrap font-sans';
-                    preElement.textContent = generatedText;
-                    generatedContainer.innerHTML = '';
-                    generatedContainer.appendChild(preElement);
-                    
-                    // 动态调整生成文本框高度
-                    adjustGeneratedContainerHeight();
-                }
+                // 显示生成的内容 - 使用textContent避免HTML注入
+                const preElement = document.createElement('pre');
+                preElement.className = 'whitespace-pre-wrap font-sans';
+                preElement.textContent = generatedText;
+                generatedContainer.innerHTML = '';
+                generatedContainer.appendChild(preElement);
+                
+                // 动态调整生成文本框高度
+                adjustGeneratedContainerHeight();
                 
                 showNotification('话术生成成功！', 'success');
                 
