@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coze API 修复工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+            background: #f8f9fa;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+        
+        .btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .btn.success {
+            background: #28a745;
+        }
+        
+        .btn.warning {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .btn.danger {
+            background: #dc3545;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .status.ok {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .log {
+            background: #f4f4f4;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin: 10px 0;
+        }
+        
+        .progress {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .alert.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .alert.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .alert.warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+        }
+        
+        .alert.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Coze API 修复工具</h1>
+            <p>专业的API问题诊断和修复解决方案</p>
+        </div>
+        
+        <div class="content">
+            <div class="section">
+                <h2>🔑 API 配置</h2>
+                <div class="form-group">
+                    <label for="apiKey">API 密钥 (Personal Access Token):</label>
+                    <input type="password" id="apiKey" placeholder="请输入以 pat_ 开头的API密钥">
+                    <span id="apiKeyStatus" class="status"></span>
+                </div>
+                <div class="form-group">
+                    <label for="botId">机器人 ID:</label>
+                    <input type="text" id="botId" placeholder="请输入纯数字的机器人ID">
+                    <span id="botIdStatus" class="status"></span>
+                </div>
+                <button class="btn" onclick="validateConfig()">🔍 验证配置</button>
+                <button class="btn success" onclick="saveConfig()">💾 保存配置</button>
+                <button class="btn warning" onclick="loadConfig()">📂 加载配置</button>
+            </div>
+            
+            <div class="section">
+                <h2>🧪 API 测试</h2>
+                <div class="form-group">
+                    <label for="testMessage">测试消息:</label>
+                    <textarea id="testMessage" rows="3" placeholder="请输入要测试的消息内容">请优化以下话术：您好，我是销售代表，想向您介绍我们的产品。</textarea>
+                </div>
+                <button class="btn" onclick="testApiCall()">🚀 测试API调用</button>
+                <button class="btn warning" onclick="testWithFixedParams()">🔧 使用修复参数测试</button>
+                <button class="btn danger" onclick="clearLog()">🗑️ 清空日志</button>
+                
+                <div class="progress" id="progressContainer" style="display: none;">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+                
+                <div id="testResult"></div>
+                <div class="log" id="apiLog"></div>
+            </div>
+            
+            <div class="section">
+                <h2>🔧 自动修复</h2>
+                <div id="fixSuggestions"></div>
+                <button class="btn success" onclick="autoFix()">🤖 自动修复常见问题</button>
+                <button class="btn" onclick="generateFixedCode()">📝 生成修复代码</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let apiLog = [];
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
+            apiLog.push(logEntry);
+            
+            const logElement = document.getElementById('apiLog');
+            logElement.textContent = apiLog.join('\n');
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            console.log(logEntry);
+        }
+        
+        function clearLog() {
+            apiLog = [];
+            document.getElementById('apiLog').textContent = '';
+            document.getElementById('testResult').innerHTML = '';
+        }
+        
+        function showProgress(show, percent = 0) {
+            const container = document.getElementById('progressContainer');
+            const bar = document.getElementById('progressBar');
+            
+            if (show) {
+                container.style.display = 'block';
+                bar.style.width = percent + '%';
+            } else {
+                container.style.display = 'none';
+            }
+        }
+        
+        function showAlert(message, type = 'info') {
+            const resultDiv = document.getElementById('testResult');
+            resultDiv.innerHTML = `<div class="alert ${type}">${message}</div>`;
+        }
+        
+        function validateConfig() {
+            const apiKey = document.getElementById('apiKey').value;
+            const botId = document.getElementById('botId').value;
+            
+            // 验证API密钥
+            const apiKeyStatus = document.getElementById('apiKeyStatus');
+            if (!apiKey) {
+                apiKeyStatus.textContent = '未填写';
+                apiKeyStatus.className = 'status error';
+            } else if (!apiKey.startsWith('pat_')) {
+                apiKeyStatus.textContent = '格式错误';
+                apiKeyStatus.className = 'status error';
+            } else if (apiKey.length < 20) {
+                apiKeyStatus.textContent = '长度不足';
+                apiKeyStatus.className = 'status warning';
+            } else {
+                apiKeyStatus.textContent = '格式正确';
+                apiKeyStatus.className = 'status ok';
+            }
+            
+            // 验证机器人ID
+            const botIdStatus = document.getElementById('botIdStatus');
+            if (!botId) {
+                botIdStatus.textContent = '未填写';
+                botIdStatus.className = 'status error';
+            } else if (!/^\d+$/.test(botId)) {
+                botIdStatus.textContent = '格式错误';
+                botIdStatus.className = 'status error';
+            } else {
+                botIdStatus.textContent = '格式正确';
+                botIdStatus.className = 'status ok';
+            }
+            
+            log('配置验证完成');
+        }
+        
+        function saveConfig() {
+            const apiKey = document.getElementById('apiKey').value;
+            const botId = document.getElementById('botId').value;
+            
+            localStorage.setItem('coze_api_key', apiKey);
+            localStorage.setItem('coze_bot_id', botId);
+            
+            showAlert('配置已保存到本地存储', 'success');
+            log('配置已保存');
+        }
+        
+        function loadConfig() {
+            const apiKey = localStorage.getItem('coze_api_key') || '';
+            const botId = localStorage.getItem('coze_bot_id') || '';
+            
+            document.getElementById('apiKey').value = apiKey;
+            document.getElementById('botId').value = botId;
+            
+            validateConfig();
+            showAlert('配置已从本地存储加载', 'info');
+            log('配置已加载');
+        }
+        
+        async function testApiCall() {
+            const apiKey = document.getElementById('apiKey').value;
+            const botId = document.getElementById('botId').value;
+            const message = document.getElementById('testMessage').value;
+            
+            if (!apiKey || !botId || !message) {
+                showAlert('请填写完整的API配置和测试消息', 'error');
+                return;
+            }
+            
+            try {
+                showProgress(true, 10);
+                log('开始API测试...');
+                
+                // 生成唯一用户ID
+                const userId = 'test_user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                
+                // 构造请求体
+                const requestBody = {
+                    bot_id: botId,
+                    user_id: userId,
+                    stream: false,
+                    auto_save_history: true,
+                    additional_messages: [{
+                        role: 'user',
+                        content: message,
+                        content_type: 'text'
+                    }]
+                };
+                
+                log(`用户ID: ${userId}`);
+                log(`请求体: ${JSON.stringify(requestBody, null, 2)}`);
+                
+                showProgress(true, 30);
+                
+                // 步骤1: 发起对话
+                log('步骤1: 发起对话请求...');
+                const response = await fetch('https://api.coze.cn/v3/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                log(`响应状态: ${response.status} ${response.statusText}`);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    log(`错误响应: ${errorText}`, 'error');
+                    throw new Error(`API调用失败: ${response.status} - ${errorText}`);
+                }
+                
+                const data = await response.json();
+                log(`响应数据: ${JSON.stringify(data, null, 2)}`);
+                
+                if (!data.data || !data.data.id) {
+                    throw new Error('未获取到chat_id');
+                }
+                
+                const chatId = data.data.id;
+                const conversationId = data.data.conversation_id;
+                log(`获取到 chat_id: ${chatId}, conversation_id: ${conversationId}`);
+                
+                showProgress(true, 50);
+                
+                // 步骤2: 轮询状态
+                log('步骤2: 轮询对话状态...');
+                let chatStatus = 'in_progress';
+                let pollCount = 0;
+                const maxPolls = 30;
+                
+                while (chatStatus === 'in_progress' && pollCount < maxPolls) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    pollCount++;
+                    
+                    const statusResponse = await fetch(`https://api.coze.cn/v3/chat/retrieve?conversation_id=${conversationId}&chat_id=${chatId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Accept': 'application/json'
+                        }
+                    });
+                    
+                    if (!statusResponse.ok) {
+                        throw new Error(`状态查询失败: ${statusResponse.status}`);
+                    }
+                    
+                    const statusData = await statusResponse.json();
+                    chatStatus = statusData.data.status;
+                    log(`轮询第${pollCount}次，状态: ${chatStatus}`);
+                    
+                    showProgress(true, 50 + (pollCount / maxPolls) * 30);
+                    
+                    if (chatStatus === 'failed') {
+                        throw new Error('对话处理失败');
+                    }
+                    if (chatStatus === 'cancelled') {
+                        throw new Error('对话被取消');
+                    }
+                }
+                
+                if (chatStatus !== 'completed') {
+                    throw new Error('对话处理超时');
+                }
+                
+                showProgress(true, 90);
+                
+                // 步骤3: 获取消息
+                log('步骤3: 获取对话消息...');
+                const messagesResponse = await fetch(`https://api.coze.cn/v3/chat/message/list?conversation_id=${conversationId}&chat_id=${chatId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`,
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (!messagesResponse.ok) {
+                    throw new Error(`消息获取失败: ${messagesResponse.status}`);
+                }
+                
+                const messagesData = await messagesResponse.json();
+                log(`消息数据: ${JSON.stringify(messagesData, null, 2)}`);
+                
+                // 解析消息
+                let generatedText = '';
+                if (messagesData.data && Array.isArray(messagesData.data)) {
+                    const assistantMessages = messagesData.data.filter(msg => 
+                        msg.role === 'assistant' && 
+                        msg.type === 'answer' && 
+                        msg.content_type === 'text'
+                    );
+                    
+                    if (assistantMessages.length > 0) {
+                        generatedText = assistantMessages.map(msg => msg.content).join('\n');
+                    }
+                }
+                
+                showProgress(true, 100);
+                
+                if (generatedText) {
+                    showAlert(`✅ API测试成功！\n\n生成的内容：\n${generatedText}`, 'success');
+                    log('API测试成功完成', 'success');
+                } else {
+                    showAlert('⚠️ API调用成功，但未获取到有效内容', 'warning');
+                    log('未获取到有效内容', 'warning');
+                }
+                
+                setTimeout(() => showProgress(false), 2000);
+                
+            } catch (error) {
+                showProgress(false);
+                showAlert(`❌ API测试失败：${error.message}`, 'error');
+                log(`API测试失败: ${error.message}`, 'error');
+                
+                // 提供修复建议
+                generateFixSuggestions(error.message);
+            }
+        }
+        
+        async function testWithFixedParams() {
+            // 使用修复后的参数进行测试
+            log('使用修复参数进行测试...');
+            await testApiCall();
+        }
+        
+        function generateFixSuggestions(errorMessage) {
+            const suggestionsDiv = document.getElementById('fixSuggestions');
+            let suggestions = [];
+            
+            if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+                suggestions.push('🔑 API密钥问题：请检查PAT令牌是否有效且具有正确权限');
+                suggestions.push('🔄 建议重新生成Personal Access Token');
+            }
+            
+            if (errorMessage.includes('404') || errorMessage.includes('Not Found')) {
+                suggestions.push('🤖 机器人问题：请确认机器人ID正确且已发布为API服务');
+                suggestions.push('📋 检查机器人是否在正确的工作空间中');
+            }
+            
+            if (errorMessage.includes('403') || errorMessage.includes('Forbidden')) {
+                suggestions.push('🚫 权限问题：PAT令牌可能缺少必要权限');
+                suggestions.push('⚙️ 确保令牌具有Bot管理和Chat权限');
+            }
+            
+            if (errorMessage.includes('429')) {
+                suggestions.push('⏱️ 请求频率过高：请降低API调用频率');
+                suggestions.push('⏳ 建议增加请求间隔时间');
+            }
+            
+            if (suggestions.length === 0) {
+                suggestions.push('🔍 通用建议：检查网络连接和API配置');
+                suggestions.push('📚 参考官方文档确认API调用格式');
+            }
+            
+            suggestionsDiv.innerHTML = suggestions.map(s => `<div class="alert warning">${s}</div>`).join('');
+        }
+        
+        function autoFix() {
+            log('开始自动修复...');
+            
+            // 自动修复常见问题
+            const apiKey = document.getElementById('apiKey').value;
+            const botId = document.getElementById('botId').value;
+            
+            let fixed = false;
+            
+            // 修复API密钥格式
+            if (apiKey && !apiKey.startsWith('pat_')) {
+                document.getElementById('apiKey').value = 'pat_' + apiKey;
+                log('已修复API密钥格式');
+                fixed = true;
+            }
+            
+            // 修复机器人ID格式
+            if (botId && !/^\d+$/.test(botId)) {
+                const cleanBotId = botId.replace(/\D/g, '');
+                if (cleanBotId) {
+                    document.getElementById('botId').value = cleanBotId;
+                    log('已修复机器人ID格式');
+                    fixed = true;
+                }
+            }
+            
+            if (fixed) {
+                validateConfig();
+                showAlert('自动修复完成，请重新测试', 'success');
+            } else {
+                showAlert('未发现可自动修复的问题', 'info');
+            }
+        }
+        
+        function generateFixedCode() {
+            const fixedCode = `
+// 修复后的Coze API调用代码
+async function callCozeAPI(message) {
+    const apiKey = '${document.getElementById('apiKey').value}';
+    const botId = '${document.getElementById('botId').value}';
+    
+    try {
+        // 生成唯一用户ID
+        const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        
+        // 构造请求体（符合Coze API v3规范）
+        const requestBody = {
+            bot_id: botId,
+            user_id: userId,
+            stream: false,
+            auto_save_history: true,
+            additional_messages: [{
+                role: 'user',
+                content: message,
+                content_type: 'text'
+            }]
+        };
+        
+        // 步骤1: 发起对话
+        const response = await fetch('https://api.coze.cn/v3/chat', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': \`Bearer \${apiKey}\`,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
+        });
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(\`API调用失败: \${response.status} - \${errorText}\`);
+        }
+        
+        const data = await response.json();
+        const chatId = data.data.id;
+        const conversationId = data.data.conversation_id;
+        
+        // 步骤2: 轮询状态
+        let chatStatus = 'in_progress';
+        let pollCount = 0;
+        const maxPolls = 30;
+        
+        while (chatStatus === 'in_progress' && pollCount < maxPolls) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            pollCount++;
+            
+            const statusResponse = await fetch(\`https://api.coze.cn/v3/chat/retrieve?conversation_id=\${conversationId}&chat_id=\${chatId}\`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': \`Bearer \${apiKey}\`,
+                    'Accept': 'application/json'
+                }
+            });
+            
+            if (!statusResponse.ok) {
+                throw new Error(\`状态查询失败: \${statusResponse.status}\`);
+            }
+            
+            const statusData = await statusResponse.json();
+            chatStatus = statusData.data.status;
+            
+            if (chatStatus === 'failed' || chatStatus === 'cancelled') {
+                throw new Error(\`对话处理失败: \${chatStatus}\`);
+            }
+        }
+        
+        if (chatStatus !== 'completed') {
+            throw new Error('对话处理超时');
+        }
+        
+        // 步骤3: 获取消息
+        const messagesResponse = await fetch(\`https://api.coze.cn/v3/chat/message/list?conversation_id=\${conversationId}&chat_id=\${chatId}\`, {
+            method: 'GET',
+            headers: {
+                'Authorization': \`Bearer \${apiKey}\`,
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (!messagesResponse.ok) {
+            throw new Error(\`消息获取失败: \${messagesResponse.status}\`);
+        }
+        
+        const messagesData = await messagesResponse.json();
+        
+        // 解析助手回复
+        if (messagesData.data && Array.isArray(messagesData.data)) {
+            const assistantMessages = messagesData.data.filter(msg => 
+                msg.role === 'assistant' && 
+                msg.type === 'answer' && 
+                msg.content_type === 'text'
+            );
+            
+            if (assistantMessages.length > 0) {
+                return assistantMessages.map(msg => msg.content).join('\\n');
+            }
+        }
+        
+        throw new Error('未获取到有效的助手回复');
+        
+    } catch (error) {
+        console.error('Coze API调用失败:', error);
+        throw error;
+    }
+}
+
+// 使用示例
+// callCozeAPI('请优化这段话术').then(result => console.log(result));
+            `;
+            
+            // 创建下载链接
+            const blob = new Blob([fixedCode], { type: 'text/javascript' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'coze-api-fixed.js';
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showAlert('修复代码已生成并下载', 'success');
+            log('修复代码已生成');
+        }
+        
+        // 页面加载时自动加载配置
+        document.addEventListener('DOMContentLoaded', function() {
+            loadConfig();
+            log('Coze API修复工具已加载');
+        });
+    </script>
+</body>
+</html>
