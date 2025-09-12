@@ -1355,28 +1355,56 @@
                 // 解析Coze API的消息格式
                 if (messagesData.data && Array.isArray(messagesData.data)) {
                     console.log('=== 解析Coze消息数组 ===');
+                    console.log('消息总数:', messagesData.data.length);
                     
-                    // 查找assistant角色的answer类型消息
-                    const assistantMessages = messagesData.data.filter(msg => 
-                        msg.role === 'assistant' && msg.type === 'answer'
+                    // 显示所有消息的详细信息
+                    messagesData.data.forEach((msg, index) => {
+                        console.log(`消息${index + 1}详情:`, {
+                            id: msg.id,
+                            role: msg.role,
+                            type: msg.type,
+                            content_type: msg.content_type,
+                            content: msg.content,
+                            chat_id: msg.chat_id
+                        });
+                    });
+                    
+                    // 根据Coze API文档，查找type=answer且content_type=text的智能体回复
+                    const textAnswerMessages = messagesData.data.filter(msg => 
+                        msg.role === 'assistant' && 
+                        msg.type === 'answer' && 
+                        msg.content_type === 'text'
                     );
                     
-                    console.log('找到助理回复消息数量:', assistantMessages.length);
+                    console.log('找到文本格式智能体回复数量:', textAnswerMessages.length);
                     
-                    if (assistantMessages.length > 0) {
-                        // 合并所有助理消息的内容
-                        generatedText = assistantMessages.map(msg => msg.content).join('');
-                        console.log('提取的回复内容:', generatedText);
+                    if (textAnswerMessages.length > 0) {
+                        // 合并所有文本回复内容
+                        generatedText = textAnswerMessages.map(msg => msg.content).join('\n');
+                        console.log('提取的智能体回复内容:', generatedText);
                     } else {
-                        console.log('未找到助理回复，显示所有消息:');
-                        messagesData.data.forEach((msg, index) => {
-                            console.log(`消息${index + 1}:`, {
-                                role: msg.role,
-                                type: msg.type,
-                                content: msg.content
-                            });
-                        });
-                        throw new Error('未找到有效的助理回复');
+                        // 如果没有找到标准的文本回复，尝试查找其他类型的assistant消息
+                        const allAssistantMessages = messagesData.data.filter(msg => 
+                            msg.role === 'assistant'
+                        );
+                        
+                        console.log('所有assistant消息数量:', allAssistantMessages.length);
+                        
+                        if (allAssistantMessages.length > 0) {
+                            // 优先选择answer类型的消息
+                            const answerMessages = allAssistantMessages.filter(msg => msg.type === 'answer');
+                            if (answerMessages.length > 0) {
+                                generatedText = answerMessages.map(msg => msg.content).join('\n');
+                                console.log('使用answer类型消息:', generatedText);
+                            } else {
+                                // 如果没有answer类型，使用第一个assistant消息
+                                generatedText = allAssistantMessages[0].content;
+                                console.log('使用第一个assistant消息:', generatedText);
+                            }
+                        } else {
+                            console.error('未找到任何assistant角色的消息');
+                            throw new Error('未找到有效的智能体回复');
+                        }
                     }
                 } else {
                     console.error('消息数据格式异常:', messagesData);
