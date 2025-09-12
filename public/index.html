@@ -762,20 +762,18 @@
                 div.addEventListener('mouseenter', function(e) {
                     if (e.target.closest('.edit-btn')) return;
                     
-                    // 延迟显示气泡，避免快速移动时频繁触发
-                    hoverTimer = setTimeout(() => {
-                        // 关闭其他项目的气泡框，保持当前项目的独立性
-                        const allBubbles = document.querySelectorAll('.sub-options-bubble');
-                        allBubbles.forEach(bubble => {
-                            const bubbleItemId = bubble.getAttribute('data-item-id');
-                            const bubbleType = bubble.getAttribute('data-type');
-                            if (bubbleItemId !== item.id.toString() || bubbleType !== type) {
-                                bubble.remove();
-                            }
-                        });
-                        
-                        showSubOptionsBubble(item, type, div);
-                    }, 200); // 200ms延迟显示
+                    // 立即显示气泡
+                    // 关闭其他项目的气泡框，保持当前项目的独立性
+                    const allBubbles = document.querySelectorAll('.sub-options-bubble');
+                    allBubbles.forEach(bubble => {
+                        const bubbleItemId = bubble.getAttribute('data-item-id');
+                        const bubbleType = bubble.getAttribute('data-type');
+                        if (bubbleItemId !== item.id.toString() || bubbleType !== type) {
+                            bubble.remove();
+                        }
+                    });
+                    
+                    showSubOptionsBubble(item, type, div);
                 });
                 
                 div.addEventListener('mouseleave', function(e) {
