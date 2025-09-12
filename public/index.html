@@ -1266,88 +1266,108 @@
                 const data = await response.json();
                 
                 // 详细记录API响应用于调试
-                console.log('API响应状态:', response.status);
-                console.log('API响应数据:', data);
-                console.log('API响应结构:', JSON.stringify(data, null, 2));
+                console.log('=== Coze API 调用流程开始 ===');
+                console.log('步骤1 - 发起对话请求响应:', data);
                 
-                let generatedText = '';
+                // 根据Coze API文档，非流式调用需要三步：
+                // 1. 发起对话请求（当前步骤）- 返回chat_id
+                // 2. 轮询对话状态 - 等待completed
+                // 3. 获取对话消息 - 获取最终结果
                 
-                // 增强的API响应处理逻辑
-                console.log('=== API响应解析开始 ===');
-                console.log('响应数据类型:', typeof data);
-                console.log('响应数据键值:', data ? Object.keys(data) : 'null/undefined');
-                console.log('完整响应数据:', JSON.stringify(data, null, 2));
+                if (!data.data || !data.data.id) {
+                    throw new Error('未获取到chat_id，API响应格式异常');
+                }
                 
-                // 深度检查数据结构
-                if (data && typeof data === 'object') {
-                    console.log('=== 深度数据结构分析 ===');
-                    for (const [key, value] of Object.entries(data)) {
-                        console.log(`字段 ${key}:`, {
-                            type: typeof value,
-                            isArray: Array.isArray(value),
-                            length: Array.isArray(value) ? value.length : undefined,
-                            keys: (typeof value === 'object' && value !== null && !Array.isArray(value)) ? Object.keys(value) : undefined,
-                            sample: Array.isArray(value) && value.length > 0 ? value[0] : value
-                        });
+                const chatId = data.data.id;
+                const conversationId = data.data.conversation_id;
+                console.log('获取到chat_id:', chatId);
+                console.log('会话ID:', conversationId);
+                
+                // 步骤2: 轮询对话状态
+                console.log('步骤2 - 开始轮询对话状态...');
+                let chatStatus = 'in_progress';
+                let pollCount = 0;
+                const maxPolls = 30; // 最多轮询30次，避免无限等待
+                
+                while (chatStatus === 'in_progress' && pollCount < maxPolls) {
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒
+                    pollCount++;
+                    
+                    const statusResponse = await fetch(`https://api.coze.cn/v3/chat/retrieve?conversation_id=${conversationId}&chat_id=${chatId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`
+                        }
+                    });
+                    
+                    if (!statusResponse.ok) {
+                        throw new Error(`状态查询失败: ${statusResponse.status}`);
+                    }
+                    
+                    const statusData = await statusResponse.json();
+                    chatStatus = statusData.data.status;
+                    console.log(`轮询第${pollCount}次，状态: ${chatStatus}`);
+                    
+                    if (chatStatus === 'failed') {
+                        throw new Error('对话处理失败');
+                    }
+                    if (chatStatus === 'cancelled') {
+                        throw new Error('对话被取消');
                     }
                 }
                 
-                // 尝试多种可能的消息数组路径
-                let messages = [];
-                console.log('=== 消息数组查找 ===');
+                if (chatStatus !== 'completed') {
+                    throw new Error('对话处理超时，请稍后重试');
+                }
                 
-                if (data && data.messages && Array.isArray(data.messages)) {
-                    messages = data.messages;
-                    console.log('✓ 从data.messages获取消息数组，长度:', messages.length);
-                } else if (data && data.data && data.data.messages && Array.isArray(data.data.messages)) {
-                    messages = data.data.messages;
-                    console.log('✓ 从data.data.messages获取消息数组，长度:', messages.length);
-                } else if (data && data.result && data.result.messages && Array.isArray(data.result.messages)) {
-                    messages = data.result.messages;
-                    console.log('✓ 从data.result.messages获取消息数组，长度:', messages.length);
-                } else if (data && data.choices && Array.isArray(data.choices)) {
-                    messages = data.choices;
-                    console.log('✓ 从data.choices获取消息数组，长度:', messages.length);
-                } else if (data && data.outputs && Array.isArray(data.outputs)) {
-                    messages = data.outputs;
-                    console.log('✓ 从data.outputs获取消息数组，长度:', messages.length);
-                } else if (data && Array.isArray(data)) {
-                    messages = data;
-                    console.log('✓ 响应本身就是消息数组，长度:', messages.length);
+                console.log('步骤3 - 对话完成，获取消息内容...');
+                
+                // 步骤3: 获取对话消息
+                const messagesResponse = await fetch(`https://api.coze.cn/v3/chat/message/list?conversation_id=${conversationId}&chat_id=${chatId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${apiKey}`
+                    }
+                });
+                
+                if (!messagesResponse.ok) {
+                    throw new Error(`消息获取失败: ${messagesResponse.status}`);
+                }
+                
+                const messagesData = await messagesResponse.json();
+                console.log('获取到的消息数据:', messagesData);
+                
+                let generatedText = '';
+                
+                // 解析Coze API的消息格式
+                if (messagesData.data && Array.isArray(messagesData.data)) {
+                    console.log('=== 解析Coze消息数组 ===');
+                    
+                    // 查找assistant角色的answer类型消息
+                    const assistantMessages = messagesData.data.filter(msg => 
+                        msg.role === 'assistant' && msg.type === 'answer'
+                    );
+                    
+                    console.log('找到助理回复消息数量:', assistantMessages.length);
+                    
+                    if (assistantMessages.length > 0) {
+                        // 合并所有助理消息的内容
+                        generatedText = assistantMessages.map(msg => msg.content).join('');
+                        console.log('提取的回复内容:', generatedText);
+                    } else {
+                        console.log('未找到助理回复，显示所有消息:');
+                        messagesData.data.forEach((msg, index) => {
+                            console.log(`消息${index + 1}:`, {
+                                role: msg.role,
+                                type: msg.type,
+                                content: msg.content
+                            });
+                        });
+                        throw new Error('未找到有效的助理回复');
+                    }
                 } else {
-                    console.log('✗ 未找到任何消息数组');
-                    
-                    // 递归查找所有数组字段
-                    function findArrays(obj, path = '') {
-                        const arrays = [];
-                        if (obj && typeof obj === 'object') {
-                            for (const [key, value] of Object.entries(obj)) {
-                                const currentPath = path ? `${path}.${key}` : key;
-                                if (Array.isArray(value)) {
-                                    arrays.push({ 
-                                        path: currentPath, 
-                                        length: value.length, 
-                                        sample: value.length > 0 ? value[0] : null 
-                                    });
-                                } else if (typeof value === 'object' && value !== null) {
-                                    arrays.push(...findArrays(value, currentPath));
-                                }
-                            }
-                        }
-                        return arrays;
-                    }
-                    
-                    const foundArrays = findArrays(data);
-                    console.log('发现的所有数组字段:', foundArrays);
-                    
-                    // 如果没有找到消息数组，检查是否有直接的文本内容
-                    console.log('检查直接文本内容字段...');
-                    const textFields = ['content', 'text', 'message', 'answer', 'response', 'reply'];
-                    for (const field of textFields) {
-                        if (data && data[field] && typeof data[field] === 'string') {
-                            console.log(`发现文本字段 ${field}:`, data[field]);
-                        }
-                    }
+                    console.error('消息数据格式异常:', messagesData);
+                    throw new Error('消息数据格式异常');
                 }
                 
                 console.log('找到消息数量:', messages.length);
