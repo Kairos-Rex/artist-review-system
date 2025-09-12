@@ -1274,20 +1274,55 @@
                         errorBody: errorText
                     });
                     
-                    // 根据状态码提供具体的错误诊断
-                    let errorMessage = `API调用失败: ${response.status} ${response.statusText}`;
-                    if (response.status === 401) {
-                        errorMessage += '\n可能原因：API密钥无效或已过期，请检查Personal Access Token';
-                    } else if (response.status === 403) {
-                        errorMessage += '\n可能原因：权限不足，请确保PAT令牌具有chat权限';
-                    } else if (response.status === 404) {
-                        errorMessage += '\n可能原因：机器人ID不存在或未发布为API服务';
-                    } else if (response.status === 429) {
-                        errorMessage += '\n可能原因：请求频率过高，请稍后重试';
-                    } else if (response.status >= 500) {
-                        errorMessage += '\n可能原因：服务器内部错误，请稍后重试';
+                    // 尝试解析错误响应为JSON
+                    let errorData;
+                    try {
+                        errorData = JSON.parse(errorText);
+                    } catch (e) {
+                        errorData = { message: errorText };
                     }
-                    errorMessage += `\n错误详情: ${errorText}`;
+                    
+                    // 根据状态码和Coze错误码提供具体的错误诊断
+                    let errorMessage = `API调用失败: ${response.status} ${response.statusText}`;
+                    
+                    // 检查Coze特有的错误码
+                    if (errorData.code === 702242001) {
+                        errorMessage += '\n🔍 Coze错误码 702242001: 参数传递错误';
+                        errorMessage += '\n可能原因：';
+                        errorMessage += '\n  - 请求头不完整（缺少Content-Type或Authorization）';
+                        errorMessage += '\n  - 请求体格式错误';
+                        errorMessage += '\n  - 必需参数缺失或格式不正确';
+                        errorMessage += '\n💡 建议：检查API密钥格式是否为 "Bearer pat_xxx"';
+                    } else if (response.status === 401) {
+                        errorMessage += '\n🔍 HTTP 401: 未授权访问';
+                        errorMessage += '\n可能原因：';
+                        errorMessage += '\n  - API密钥无效或已过期';
+                        errorMessage += '\n  - 密钥格式错误（应为 Bearer pat_xxx）';
+                        errorMessage += '\n💡 建议：重新生成Personal Access Token';
+                    } else if (response.status === 403) {
+                        errorMessage += '\n🔍 HTTP 403: 权限不足';
+                        errorMessage += '\n可能原因：';
+                        errorMessage += '\n  - PAT令牌缺少chat权限';
+                        errorMessage += '\n  - 机器人与令牌不在同一空间';
+                        errorMessage += '\n💡 建议：检查令牌权限设置';
+                    } else if (response.status === 404) {
+                        errorMessage += '\n🔍 HTTP 404: 资源不存在';
+                        errorMessage += '\n可能原因：';
+                        errorMessage += '\n  - 机器人ID不存在';
+                        errorMessage += '\n  - 机器人未发布为API服务';
+                        errorMessage += '\n💡 建议：确认机器人ID并检查发布状态';
+                    } else if (response.status === 429) {
+                        errorMessage += '\n🔍 HTTP 429: 请求过多';
+                        errorMessage += '\n可能原因：请求频率超过限制';
+                        errorMessage += '\n💡 建议：降低请求频率或稍后重试';
+                    } else if (response.status >= 500) {
+                        errorMessage += '\n🔍 HTTP 5xx: 服务器错误';
+                        errorMessage += '\n可能原因：Coze服务器内部错误';
+                        errorMessage += '\n💡 建议：稍后重试或联系技术支持';
+                    }
+                    
+                    errorMessage += `\n\n📋 完整错误信息: ${errorText}`;
+                    errorMessage += '\n\n🔧 使用错误排查工具: coze-error-debug.html';
                     throw new Error(errorMessage);
                 }
                 
