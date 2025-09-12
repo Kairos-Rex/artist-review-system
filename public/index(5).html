@@ -1264,21 +1264,80 @@
                 
                 // 增强的API响应处理逻辑
                 console.log('=== API响应解析开始 ===');
-                console.log('原始响应数据:', data);
+                console.log('响应数据类型:', typeof data);
+                console.log('响应数据键值:', data ? Object.keys(data) : 'null/undefined');
+                console.log('完整响应数据:', JSON.stringify(data, null, 2));
+                
+                // 深度检查数据结构
+                if (data && typeof data === 'object') {
+                    console.log('=== 深度数据结构分析 ===');
+                    for (const [key, value] of Object.entries(data)) {
+                        console.log(`字段 ${key}:`, {
+                            type: typeof value,
+                            isArray: Array.isArray(value),
+                            length: Array.isArray(value) ? value.length : undefined,
+                            keys: (typeof value === 'object' && value !== null && !Array.isArray(value)) ? Object.keys(value) : undefined,
+                            sample: Array.isArray(value) && value.length > 0 ? value[0] : value
+                        });
+                    }
+                }
                 
                 // 尝试多种可能的消息数组路径
                 let messages = [];
-                if (data.messages && Array.isArray(data.messages)) {
+                console.log('=== 消息数组查找 ===');
+                
+                if (data && data.messages && Array.isArray(data.messages)) {
                     messages = data.messages;
-                    console.log('从data.messages获取消息数组');
-                } else if (data.data && data.data.messages && Array.isArray(data.data.messages)) {
+                    console.log('✓ 从data.messages获取消息数组，长度:', messages.length);
+                } else if (data && data.data && data.data.messages && Array.isArray(data.data.messages)) {
                     messages = data.data.messages;
-                    console.log('从data.data.messages获取消息数组');
-                } else if (data.result && data.result.messages && Array.isArray(data.result.messages)) {
+                    console.log('✓ 从data.data.messages获取消息数组，长度:', messages.length);
+                } else if (data && data.result && data.result.messages && Array.isArray(data.result.messages)) {
                     messages = data.result.messages;
-                    console.log('从data.result.messages获取消息数组');
+                    console.log('✓ 从data.result.messages获取消息数组，长度:', messages.length);
+                } else if (data && data.choices && Array.isArray(data.choices)) {
+                    messages = data.choices;
+                    console.log('✓ 从data.choices获取消息数组，长度:', messages.length);
+                } else if (data && data.outputs && Array.isArray(data.outputs)) {
+                    messages = data.outputs;
+                    console.log('✓ 从data.outputs获取消息数组，长度:', messages.length);
+                } else if (data && Array.isArray(data)) {
+                    messages = data;
+                    console.log('✓ 响应本身就是消息数组，长度:', messages.length);
                 } else {
-                    console.log('未找到标准消息数组，尝试其他字段');
+                    console.log('✗ 未找到任何消息数组');
+                    
+                    // 递归查找所有数组字段
+                    function findArrays(obj, path = '') {
+                        const arrays = [];
+                        if (obj && typeof obj === 'object') {
+                            for (const [key, value] of Object.entries(obj)) {
+                                const currentPath = path ? `${path}.${key}` : key;
+                                if (Array.isArray(value)) {
+                                    arrays.push({ 
+                                        path: currentPath, 
+                                        length: value.length, 
+                                        sample: value.length > 0 ? value[0] : null 
+                                    });
+                                } else if (typeof value === 'object' && value !== null) {
+                                    arrays.push(...findArrays(value, currentPath));
+                                }
+                            }
+                        }
+                        return arrays;
+                    }
+                    
+                    const foundArrays = findArrays(data);
+                    console.log('发现的所有数组字段:', foundArrays);
+                    
+                    // 如果没有找到消息数组，检查是否有直接的文本内容
+                    console.log('检查直接文本内容字段...');
+                    const textFields = ['content', 'text', 'message', 'answer', 'response', 'reply'];
+                    for (const field of textFields) {
+                        if (data && data[field] && typeof data[field] === 'string') {
+                            console.log(`发现文本字段 ${field}:`, data[field]);
+                        }
+                    }
                 }
                 
                 console.log('找到消息数量:', messages.length);
