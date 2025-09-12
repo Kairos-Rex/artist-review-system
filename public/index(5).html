@@ -2268,32 +2268,28 @@
                         let hasValidResponse = false;
                         let responseContent = '';
                         
-                        if (data && data.messages && data.messages.length > 0) {
-                            const assistantMessages = data.messages.filter(msg => 
-                                msg.role === 'assistant' && 
-                                msg.content && 
-                                msg.content.trim() !== '' &&
-                                !msg.content.startsWith('{') && 
-                                !msg.content.startsWith('RPCError')
-                            );
+                        // 获取消息数组
+                        const messages = data.messages || (data.data && data.data.messages) || [];
+                        console.log('找到消息数量:', messages.length);
+                        
+                        if (messages.length > 0) {
+                            // 查找assistant消息，使用更宽松的过滤条件
+                            const assistantMessages = messages.filter(msg => {
+                                const isAssistant = msg.role === 'assistant';
+                                const hasContent = msg.content && typeof msg.content === 'string' && msg.content.trim() !== '';
+                                console.log(`消息检查 - 角色: ${msg.role}, 有内容: ${hasContent}, 内容: "${msg.content}"`);
+                                return isAssistant && hasContent;
+                            });
                             
                             if (assistantMessages.length > 0) {
                                 hasValidResponse = true;
-                                responseContent = assistantMessages[0].content;
+                                responseContent = assistantMessages[assistantMessages.length - 1].content;
+                                console.log('使用机器人回复:', responseContent);
+                            } else {
+                                debugInfo = `找到${messages.length}条消息，但没有有效的assistant回复。`;
                             }
-                        } else if (data && data.data && data.data.messages && data.data.messages.length > 0) {
-                            const assistantMessages = data.data.messages.filter(msg => 
-                                msg.role === 'assistant' && 
-                                msg.content && 
-                                msg.content.trim() !== '' &&
-                                !msg.content.startsWith('{') && 
-                                !msg.content.startsWith('RPCError')
-                            );
-                            
-                            if (assistantMessages.length > 0) {
-                                hasValidResponse = true;
-                                responseContent = assistantMessages[0].content;
-                            }
+                        } else {
+                            debugInfo = '响应中没有找到消息数组。';
                         }
                         
                         if (hasValidResponse) {
@@ -2301,7 +2297,7 @@
                             testResult.innerHTML = `<i class="fa fa-check-circle mr-1"></i>API连接测试成功！机器人回复："${responseContent.substring(0, 50)}${responseContent.length > 50 ? '...' : ''}"`;
                         } else {
                             testResult.className = 'mt-2 text-sm text-yellow-600';
-                            testResult.innerHTML = '<i class="fa fa-exclamation-triangle mr-1"></i>API连接成功，但未获取到有效回复内容。请检查机器人配置。';
+                            testResult.innerHTML = `<i class="fa fa-exclamation-triangle mr-1"></i>API连接成功，但未获取到有效回复内容。${debugInfo} <a href="debug-api.html" target="_blank" style="color: #007bff; text-decoration: underline;">点击这里使用详细诊断工具</a>`;
                         }
                     } else {
                         const errorText = await response.text();
