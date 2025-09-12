@@ -1227,6 +1227,30 @@
                 const apiKey = getApiKey();
                 const botId = getBotId();
                 
+                // 根据Coze API v3文档优化参数格式
+                const userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                const requestBody = {
+                    bot_id: botId,
+                    user_id: userId, // 使用动态生成的唯一用户ID
+                    stream: false,
+                    auto_save_history: true,
+                    additional_messages: [
+                        {
+                            role: 'user',
+                            content: `请优化以下话术内容，使其更加专业、礼貌和有说服力：\n\n${inputText.trim()}`,
+                            content_type: 'text'
+                        }
+                    ]
+                };
+                
+                console.log('=== Coze API v3 请求详情 ===');
+                console.log('API端点: https://api.coze.cn/v3/chat');
+                console.log('请求方法: POST');
+                console.log('用户ID:', userId);
+                console.log('机器人ID:', botId);
+                console.log('API密钥状态:', apiKey ? `已配置(${apiKey.substring(0, 8)}...)` : '未配置');
+                console.log('请求体:', JSON.stringify(requestBody, null, 2));
+                
                 // 调用扣子API v3
                 const response = await fetch('https://api.coze.cn/v3/chat', {
                     method: 'POST',
@@ -1234,30 +1258,53 @@
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${apiKey}`
                     },
-                    body: JSON.stringify({
-                        bot_id: botId,
-                        user_id: '123123',
-                        stream: false,
-                        auto_save_history: true,
-                        additional_messages: [
-                            {
-                                role: 'user',
-                                content: `请优化以下话术内容，使其更加专业、礼貌和有说服力：\n\n${inputText.trim()}`,
-                                content_type: 'text'
-                            }
-                        ]
-                    })
+                    body: JSON.stringify(requestBody)
                 });
                 
+                console.log('=== API响应状态检查 ===');
+                console.log('响应状态码:', response.status);
+                console.log('响应状态文本:', response.statusText);
+                console.log('响应头信息:', Object.fromEntries(response.headers.entries()));
+                
                 if (!response.ok) {
-                    throw new Error(`API调用失败: ${response.status} ${response.statusText}`);
+                    const errorText = await response.text();
+                    console.error('API调用失败详情:', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        errorBody: errorText
+                    });
+                    
+                    // 根据状态码提供具体的错误诊断
+                    let errorMessage = `API调用失败: ${response.status} ${response.statusText}`;
+                    if (response.status === 401) {
+                        errorMessage += '\n可能原因：API密钥无效或已过期，请检查Personal Access Token';
+                    } else if (response.status === 403) {
+                        errorMessage += '\n可能原因：权限不足，请确保PAT令牌具有chat权限';
+                    } else if (response.status === 404) {
+                        errorMessage += '\n可能原因：机器人ID不存在或未发布为API服务';
+                    } else if (response.status === 429) {
+                        errorMessage += '\n可能原因：请求频率过高，请稍后重试';
+                    } else if (response.status >= 500) {
+                        errorMessage += '\n可能原因：服务器内部错误，请稍后重试';
+                    }
+                    errorMessage += `\n错误详情: ${errorText}`;
+                    throw new Error(errorMessage);
                 }
                 
                 const data = await response.json();
                 
                 // 详细记录API响应用于调试
-                console.log('=== Coze API 调用流程开始 ===');
-                console.log('步骤1 - 发起对话请求响应:', data);
+                console.log('=== Coze API v3 调用流程开始 ===');
+                console.log('步骤1 - 发起对话请求成功');
+                console.log('完整响应数据:', JSON.stringify(data, null, 2));
+                console.log('响应数据结构检查:', {
+                    hasCode: 'code' in data,
+                    code: data.code,
+                    hasMsg: 'msg' in data,
+                    msg: data.msg,
+                    hasData: 'data' in data,
+                    dataType: typeof data.data
+                });
                 
                 // 根据Coze API文档，非流式调用需要三步：
                 // 1. 发起对话请求（当前步骤）- 返回chat_id
