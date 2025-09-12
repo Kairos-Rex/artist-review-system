@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>功能调试测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 min-h-screen py-8">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+            <i class="fa fa-bug text-red-500"></i>
+            功能调试测试
+        </h1>
+        
+        <div class="space-y-4">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h2 class="text-lg font-semibold text-blue-800 mb-3">
+                    <i class="fa fa-flask"></i>
+                    基础功能测试
+                </h2>
+                <div class="space-y-3">
+                    <button onclick="testBasicClick()" class="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                        <i class="fa fa-mouse-pointer mr-2"></i>
+                        测试按钮点击
+                    </button>
+                    <button onclick="testConsoleLog()" class="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors">
+                        <i class="fa fa-terminal mr-2"></i>
+                        测试控制台输出
+                    </button>
+                    <button onclick="testApiConfig()" class="w-full px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors">
+                        <i class="fa fa-cog mr-2"></i>
+                        测试API配置访问
+                    </button>
+                </div>
+            </div>
+            
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h3 class="text-lg font-semibold text-yellow-800 mb-3">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    测试结果
+                </h3>
+                <div id="testResults" class="space-y-2 text-sm">
+                    <p class="text-gray-600">点击上方按钮开始测试...</p>
+                </div>
+            </div>
+            
+            <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h3 class="text-lg font-semibold text-red-800 mb-3">
+                    <i class="fa fa-times-circle"></i>
+                    错误日志
+                </h3>
+                <div id="errorLog" class="space-y-2 text-sm font-mono">
+                    <p class="text-gray-600">暂无错误...</p>
+                </div>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="clearResults()" class="flex-1 px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors">
+                    <i class="fa fa-trash mr-2"></i>
+                    清除结果
+                </button>
+                <button onclick="goToMainPage()" class="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                    <i class="fa fa-home mr-2"></i>
+                    返回主页面
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 模拟API_CONFIG变量（用于测试）
+        let API_CONFIG = {
+            apiKey: 'test_api_key',
+            botId: 'test_bot_id'
+        };
+        
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = {
+                'success': 'text-green-600',
+                'error': 'text-red-600',
+                'warning': 'text-yellow-600',
+                'info': 'text-blue-600'
+            }[type] || 'text-gray-600';
+            
+            const resultElement = document.createElement('p');
+            resultElement.className = colorClass;
+            resultElement.innerHTML = `[${timestamp}] ${message}`;
+            
+            if (resultsDiv.children[0].textContent.includes('点击上方按钮')) {
+                resultsDiv.innerHTML = '';
+            }
+            resultsDiv.appendChild(resultElement);
+        }
+        
+        function addError(error) {
+            const errorDiv = document.getElementById('errorLog');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            const errorElement = document.createElement('p');
+            errorElement.className = 'text-red-600';
+            errorElement.innerHTML = `[${timestamp}] ${error}`;
+            
+            if (errorDiv.children[0].textContent.includes('暂无错误')) {
+                errorDiv.innerHTML = '';
+            }
+            errorDiv.appendChild(errorElement);
+        }
+        
+        function testBasicClick() {
+            try {
+                addResult('✅ 按钮点击功能正常', 'success');
+                addResult('✅ JavaScript基础功能正常', 'success');
+            } catch (error) {
+                addError('按钮点击测试失败: ' + error.message);
+                addResult('❌ 按钮点击功能异常', 'error');
+            }
+        }
+        
+        function testConsoleLog() {
+            try {
+                console.log('控制台测试消息');
+                console.warn('控制台警告测试');
+                console.error('控制台错误测试（这是测试，不是真实错误）');
+                addResult('✅ 控制台输出功能正常', 'success');
+                addResult('📝 请检查浏览器控制台查看输出', 'info');
+            } catch (error) {
+                addError('控制台测试失败: ' + error.message);
+                addResult('❌ 控制台功能异常', 'error');
+            }
+        }
+        
+        function testApiConfig() {
+            try {
+                if (typeof API_CONFIG !== 'undefined') {
+                    addResult('✅ API_CONFIG变量存在', 'success');
+                    addResult(`📋 API Key: ${API_CONFIG.apiKey || '(空)'}`, 'info');
+                    addResult(`📋 Bot ID: ${API_CONFIG.botId || '(空)'}`, 'info');
+                    
+                    // 测试修改配置
+                    const originalApiKey = API_CONFIG.apiKey;
+                    API_CONFIG.apiKey = 'test_modified';
+                    if (API_CONFIG.apiKey === 'test_modified') {
+                        addResult('✅ API配置可以正常修改', 'success');
+                        API_CONFIG.apiKey = originalApiKey; // 恢复原值
+                    } else {
+                        addResult('❌ API配置修改失败', 'error');
+                    }
+                } else {
+                    addResult('❌ API_CONFIG变量不存在', 'error');
+                }
+            } catch (error) {
+                addError('API配置测试失败: ' + error.message);
+                addResult('❌ API配置访问异常', 'error');
+            }
+        }
+        
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '<p class="text-gray-600">点击上方按钮开始测试...</p>';
+            document.getElementById('errorLog').innerHTML = '<p class="text-gray-600">暂无错误...</p>';
+        }
+        
+        function goToMainPage() {
+            window.location.href = './index(5).html';
+        }
+        
+        // 捕获全局错误
+        window.addEventListener('error', function(event) {
+            addError(`全局错误: ${event.error.message} (${event.filename}:${event.lineno})`);
+        });
+        
+        // 捕获未处理的Promise错误
+        window.addEventListener('unhandledrejection', function(event) {
+            addError(`未处理的Promise错误: ${event.reason}`);
+        });
+        
+        // 页面加载完成后自动运行基础测试
+        document.addEventListener('DOMContentLoaded', function() {
+            addResult('🚀 页面加载完成，开始自动测试...', 'info');
+            setTimeout(() => {
+                testBasicClick();
+                testApiConfig();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

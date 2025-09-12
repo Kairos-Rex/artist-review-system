@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>检查API配置</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .config-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        .configured {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+        .not-configured {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        .status {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .value {
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 5px;
+            border-radius: 3px;
+            word-break: break-all;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>API配置检查结果</h1>
+        <p>以下是当前localStorage中保存的API配置信息：</p>
+        
+        <div id="apiKeyStatus" class="config-item">
+            <div class="status">API密钥状态：</div>
+            <div id="apiKeyValue" class="value"></div>
+        </div>
+        
+        <div id="botIdStatus" class="config-item">
+            <div class="status">机器人ID状态：</div>
+            <div id="botIdValue" class="value"></div>
+        </div>
+        
+        <div id="overallStatus" class="config-item">
+            <div class="status">整体配置状态：</div>
+            <div id="overallValue" class="value"></div>
+        </div>
+        
+        <button onclick="refreshCheck()">刷新检查</button>
+        <button onclick="clearAll()">清除所有配置</button>
+        <button onclick="window.open('/', '_blank')">返回主页面</button>
+    </div>
+
+    <script>
+        function checkConfig() {
+            // 获取API密钥
+            const apiKey = localStorage.getItem('coze_api_key') || '';
+            const botId = localStorage.getItem('coze_bot_id') || '';
+            
+            // 检查API密钥
+            const apiKeyDiv = document.getElementById('apiKeyStatus');
+            const apiKeyValueDiv = document.getElementById('apiKeyValue');
+            
+            if (apiKey) {
+                apiKeyDiv.className = 'config-item configured';
+                apiKeyValueDiv.textContent = `已配置：${apiKey.substring(0, 20)}... (长度: ${apiKey.length})`;
+            } else {
+                apiKeyDiv.className = 'config-item not-configured';
+                apiKeyValueDiv.textContent = '未配置';
+            }
+            
+            // 检查机器人ID
+            const botIdDiv = document.getElementById('botIdStatus');
+            const botIdValueDiv = document.getElementById('botIdValue');
+            
+            if (botId) {
+                botIdDiv.className = 'config-item configured';
+                botIdValueDiv.textContent = `已配置：${botId}`;
+            } else {
+                botIdDiv.className = 'config-item not-configured';
+                botIdValueDiv.textContent = '未配置';
+            }
+            
+            // 整体状态
+            const overallDiv = document.getElementById('overallStatus');
+            const overallValueDiv = document.getElementById('overallValue');
+            
+            if (apiKey && botId) {
+                overallDiv.className = 'config-item configured';
+                overallValueDiv.textContent = '✓ 配置完整，可以正常使用API功能';
+            } else {
+                overallDiv.className = 'config-item not-configured';
+                overallValueDiv.textContent = '✗ 配置不完整，需要设置API密钥和机器人ID';
+            }
+            
+            // 显示所有localStorage项目（调试用）
+            console.log('所有localStorage项目：');
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                const value = localStorage.getItem(key);
+                console.log(`${key}: ${value}`);
+            }
+        }
+        
+        function refreshCheck() {
+            checkConfig();
+        }
+        
+        function clearAll() {
+            if (confirm('确定要清除所有API配置吗？')) {
+                localStorage.removeItem('coze_api_key');
+                localStorage.removeItem('coze_bot_id');
+                checkConfig();
+                alert('配置已清除');
+            }
+        }
+        
+        // 页面加载时自动检查
+        window.onload = function() {
+            checkConfig();
+        };
+    </script>
+</body>
+</html>

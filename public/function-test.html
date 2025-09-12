@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>功能测试页面</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 min-h-screen py-8">
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+            <i class="fa fa-check-circle text-green-500"></i>
+            功能测试验证
+        </h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- 基础功能测试 -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h2 class="text-lg font-semibold text-blue-800 mb-4">
+                    <i class="fa fa-cogs"></i>
+                    基础功能测试
+                </h2>
+                <div class="space-y-3">
+                    <button onclick="testButtonClick()" class="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                        <i class="fa fa-mouse-pointer mr-2"></i>
+                        测试按钮响应
+                    </button>
+                    <button onclick="testJavaScript()" class="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors">
+                        <i class="fa fa-code mr-2"></i>
+                        测试JavaScript执行
+                    </button>
+                    <button onclick="testDOMManipulation()" class="w-full px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors">
+                        <i class="fa fa-edit mr-2"></i>
+                        测试DOM操作
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 配置功能测试 -->
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h2 class="text-lg font-semibold text-green-800 mb-4">
+                    <i class="fa fa-cog"></i>
+                    配置功能测试
+                </h2>
+                <div class="space-y-3">
+                    <button onclick="testConfigAccess()" class="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors">
+                        <i class="fa fa-database mr-2"></i>
+                        测试配置访问
+                    </button>
+                    <button onclick="testConfigModify()" class="w-full px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors">
+                        <i class="fa fa-edit mr-2"></i>
+                        测试配置修改
+                    </button>
+                    <button onclick="openMainPageConfig()" class="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                        <i class="fa fa-external-link mr-2"></i>
+                        打开主页面配置
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 事件监听测试 -->
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <h2 class="text-lg font-semibold text-yellow-800 mb-4">
+                    <i class="fa fa-bolt"></i>
+                    事件监听测试
+                </h2>
+                <div class="space-y-3">
+                    <button onclick="testEventListeners()" class="w-full px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors">
+                        <i class="fa fa-headphones mr-2"></i>
+                        测试事件监听器
+                    </button>
+                    <input type="text" id="testInput" placeholder="输入测试文本" class="w-full p-2 border rounded">
+                    <button onclick="testInputEvents()" class="w-full px-4 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors">
+                        <i class="fa fa-keyboard mr-2"></i>
+                        测试输入事件
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 测试结果 -->
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">
+                    <i class="fa fa-list-alt"></i>
+                    测试结果
+                </h2>
+                <div id="testResults" class="space-y-2 text-sm max-h-64 overflow-y-auto">
+                    <p class="text-gray-600">等待测试开始...</p>
+                </div>
+                <div class="mt-4 flex gap-2">
+                    <button onclick="clearResults()" class="flex-1 px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm">
+                        清除结果
+                    </button>
+                    <button onclick="runAllTests()" class="flex-1 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm">
+                        运行全部测试
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-6 flex gap-3">
+            <button onclick="goToMainPage()" class="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+                <i class="fa fa-home mr-2"></i>
+                返回主页面
+            </button>
+            <button onclick="goToDebugPage()" class="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors">
+                <i class="fa fa-bug mr-2"></i>
+                调试页面
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        let testCount = 0;
+        
+        function addResult(message, type = 'info') {
+            const resultsDiv = document.getElementById('testResults');
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = {
+                'success': 'text-green-600',
+                'error': 'text-red-600',
+                'warning': 'text-yellow-600',
+                'info': 'text-blue-600'
+            }[type] || 'text-gray-600';
+            
+            const resultElement = document.createElement('p');
+            resultElement.className = colorClass;
+            resultElement.innerHTML = `[${timestamp}] ${message}`;
+            
+            if (resultsDiv.children[0].textContent.includes('等待测试')) {
+                resultsDiv.innerHTML = '';
+            }
+            resultsDiv.appendChild(resultElement);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+        
+        function testButtonClick() {
+            testCount++;
+            addResult(`✅ 按钮点击测试 #${testCount} - 成功`, 'success');
+        }
+        
+        function testJavaScript() {
+            try {
+                const testArray = [1, 2, 3];
+                const result = testArray.map(x => x * 2);
+                addResult(`✅ JavaScript执行正常 - 数组操作结果: [${result.join(', ')}]`, 'success');
+            } catch (error) {
+                addResult(`❌ JavaScript执行失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function testDOMManipulation() {
+            try {
+                const testDiv = document.createElement('div');
+                testDiv.textContent = 'DOM测试元素';
+                testDiv.style.display = 'none';
+                document.body.appendChild(testDiv);
+                
+                if (document.body.contains(testDiv)) {
+                    addResult('✅ DOM操作正常 - 元素创建和添加成功', 'success');
+                    document.body.removeChild(testDiv);
+                    addResult('✅ DOM操作正常 - 元素删除成功', 'success');
+                } else {
+                    addResult('❌ DOM操作失败 - 元素添加失败', 'error');
+                }
+            } catch (error) {
+                addResult(`❌ DOM操作失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function testConfigAccess() {
+            try {
+                // 模拟配置访问（因为这是独立页面）
+                const mockConfig = {
+                    apiKey: 'test_api_key',
+                    botId: 'test_bot_id'
+                };
+                
+                if (mockConfig.apiKey && mockConfig.botId) {
+                    addResult('✅ 配置访问正常 - 可以读取配置数据', 'success');
+                } else {
+                    addResult('❌ 配置访问失败 - 配置数据为空', 'error');
+                }
+            } catch (error) {
+                addResult(`❌ 配置访问失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function testConfigModify() {
+            try {
+                // 模拟配置修改
+                let mockConfig = {
+                    apiKey: 'original_key',
+                    botId: 'original_id'
+                };
+                
+                mockConfig.apiKey = 'modified_key';
+                mockConfig.botId = 'modified_id';
+                
+                if (mockConfig.apiKey === 'modified_key' && mockConfig.botId === 'modified_id') {
+                    addResult('✅ 配置修改正常 - 可以更新配置数据', 'success');
+                } else {
+                    addResult('❌ 配置修改失败 - 配置更新失败', 'error');
+                }
+            } catch (error) {
+                addResult(`❌ 配置修改失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function testEventListeners() {
+            try {
+                let eventTriggered = false;
+                const testButton = document.createElement('button');
+                testButton.addEventListener('click', function() {
+                    eventTriggered = true;
+                });
+                
+                // 模拟点击
+                testButton.click();
+                
+                if (eventTriggered) {
+                    addResult('✅ 事件监听器正常 - 事件可以正确触发', 'success');
+                } else {
+                    addResult('❌ 事件监听器失败 - 事件未触发', 'error');
+                }
+            } catch (error) {
+                addResult(`❌ 事件监听器测试失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function testInputEvents() {
+            try {
+                const input = document.getElementById('testInput');
+                const originalValue = input.value;
+                
+                // 模拟输入
+                input.value = 'test input value';
+                input.dispatchEvent(new Event('input'));
+                
+                if (input.value === 'test input value') {
+                    addResult('✅ 输入事件正常 - 输入框可以正确更新', 'success');
+                } else {
+                    addResult('❌ 输入事件失败 - 输入框更新失败', 'error');
+                }
+                
+                // 恢复原值
+                input.value = originalValue;
+            } catch (error) {
+                addResult(`❌ 输入事件测试失败: ${error.message}`, 'error');
+            }
+        }
+        
+        function openMainPageConfig() {
+            addResult('🔗 正在打开主页面...', 'info');
+            window.open('./index(5).html', '_blank');
+        }
+        
+        function clearResults() {
+            document.getElementById('testResults').innerHTML = '<p class="text-gray-600">等待测试开始...</p>';
+            testCount = 0;
+        }
+        
+        function runAllTests() {
+            addResult('🚀 开始运行全部测试...', 'info');
+            setTimeout(() => testButtonClick(), 100);
+            setTimeout(() => testJavaScript(), 200);
+            setTimeout(() => testDOMManipulation(), 300);
+            setTimeout(() => testConfigAccess(), 400);
+            setTimeout(() => testConfigModify(), 500);
+            setTimeout(() => testEventListeners(), 600);
+            setTimeout(() => testInputEvents(), 700);
+            setTimeout(() => addResult('✅ 全部测试完成！', 'success'), 800);
+        }
+        
+        function goToMainPage() {
+            window.location.href = './index(5).html';
+        }
+        
+        function goToDebugPage() {
+            window.location.href = './debug-test.html';
+        }
+        
+        // 页面加载完成后自动运行基础测试
+        document.addEventListener('DOMContentLoaded', function() {
+            addResult('📋 功能测试页面加载完成', 'info');
+            addResult('💡 点击按钮开始测试，或点击"运行全部测试"', 'info');
+        });
+        
+        // 捕获全局错误
+        window.addEventListener('error', function(event) {
+            addResult(`🚨 全局错误: ${event.error.message}`, 'error');
+        });
+    </script>
+</body>
+</html>

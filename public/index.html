@@ -1,0 +1,2407 @@
+<!DOCTYPE html>
+<!-- 部署时间: 2025-09-12T13:34:43.069Z -->
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画师评价系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --secondary: #10b981;
+            --accent: #f59e0b;
+            --neutral: #6b7280;
+            --dark: #1f2937;
+        }
+        
+        .text-primary { color: var(--primary); }
+        .bg-primary { background-color: var(--primary); }
+        .text-secondary { color: var(--secondary); }
+        .bg-secondary { background-color: var(--secondary); }
+        .text-accent { color: var(--accent); }
+        .bg-accent { background-color: var(--accent); }
+        .text-neutral { color: var(--neutral); }
+        .text-dark { color: var(--dark); }
+        
+        .btn-hover {
+            transition: all 0.2s ease;
+        }
+        
+        .btn-hover:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .item-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        
+        .history-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 16px;
+        }
+        
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+        }
+        
+        .category-btn {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            color: var(--neutral);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .category-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        
+        .category-btn-active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        
+        /* 隐藏选择面板滚动条 */
+        .selection-panel {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .selection-panel::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .template-scroll-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: white;
+            border: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            z-index: 10;
+        }
+        
+        .template-scroll-btn:hover {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+        
+        .result-container-adaptive {
+            overflow-y: auto;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+        
+        .btn-text-nowrap {
+            white-space: nowrap;
+        }
+        
+        .config-transition {
+            transition: all 0.3s ease;
+        }
+        
+        .add-item-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .add-item-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        @media (max-width: 768px) {
+            .item-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .history-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .template-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+        }
+        
+        .floating-container {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            width: 90%;
+            max-width: 1200px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        @media (max-width: 768px) {
+            .floating-container {
+                width: 95%;
+                top: 10px;
+            }
+        }
+        
+        .function-area {
+            min-height: 200px;
+        }
+        
+        .function-buttons {
+            flex-shrink: 0;
+        }
+        
+        @media (max-width: 768px) {
+            .function-buttons {
+                min-width: auto;
+                width: 100%;
+            }
+            
+            .function-area .flex {
+                flex-direction: column;
+            }
+        }
+    </style>
+
+    <script>
+        // 部署环境检测
+        if (typeof window !== 'undefined') {
+            console.log('🚀 画师评价系统已部署到生产环境');
+            console.log('📍 当前域名:', window.location.hostname);
+            console.log('🔒 HTTPS状态:', window.location.protocol === 'https:' ? '已启用' : '未启用');
+        }
+    </script>
+</head>
+<body class="bg-gray-50 font-sans text-dark overflow-x-hidden">
+    <!-- 新的三栏布局 -->
+    <div class="flex h-screen">
+        <!-- 左侧：模板区域 -->
+        <div class="w-1/4 bg-white shadow-md overflow-y-auto p-5">
+            <div class="mb-4">
+                <h2 class="text-lg font-semibold mb-4">模板库</h2>
+            </div>
+            
+            <!-- 分类按钮组 - 竖向排列 -->
+            <div class="mb-4">
+                <div id="categoryButtons" class="flex flex-col gap-2">
+                    <button class="category-btn category-btn-active text-left" data-category="all">所有分类</button>
+                    <!-- 分类按钮将通过JS动态生成 -->
+                </div>
+            </div>
+            
+            <!-- 模板统计和设置 -->
+            <div class="flex items-center justify-between mb-4 text-sm">
+                <div class="text-neutral">
+                    <span id="templateCount">0</span> 个模板
+                </div>
+                <div class="flex gap-2">
+                    <button id="templateSettingsBtn" class="text-neutral hover:text-primary p-1 rounded-full hover:bg-gray-100 transition-colors">
+                        <i class="fa fa-cog"></i>
+                    </button>
+                    <button id="refreshTemplatesBtn" class="text-neutral hover:text-primary p-1 rounded-full hover:bg-gray-100 transition-colors" title="刷新模板和分类">
+                        <i class="fa fa-refresh"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 模板列表 - 竖向排列 -->
+            <div class="relative">
+                <div id="templateContainer" class="flex flex-col gap-2 max-h-[400px] overflow-y-auto">
+                    <!-- 模板项目将通过JS动态生成 -->
+                    <div class="text-neutral italic text-center py-6">暂无模板，请创建新模板</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 中间：选择面板 -->
+        <div class="flex-1 overflow-y-auto selection-panel p-4">
+            <div class="bg-white rounded-xl shadow-md p-5">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">选择面板</h2>
+                    <div class="flex gap-2">
+                        <button id="resetBtnPanel" class="flex items-center gap-1 text-neutral hover:text-red-500 transition-colors btn-text-nowrap">
+                            <i class="fa fa-refresh"></i> 重置选择
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 起手称呼式 -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-medium text-lg flex items-center gap-2">
+                            <i class="fa fa-comment-o text-primary"></i>起手称呼式
+                        </h3>
+                        <button class="add-item-btn text-sm text-primary hover:text-primary/80 btn-text-nowrap" data-type="greeting">
+                            <i class="fa fa-plus-circle"></i>
+                        </button>
+                    </div>
+                    <div id="greetingContainer" class="item-grid" data-type="greeting">
+                        <!-- 起手式项目将通过JS动态生成 -->
+                    </div>
+                </div>
+                
+                <!-- 优点 -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-medium text-lg flex items-center gap-2">
+                            <i class="fa fa-thumbs-up text-green-500"></i>优点
+                        </h3>
+                        <button class="add-item-btn text-sm text-primary hover:text-primary/80 btn-text-nowrap" data-type="strength">
+                            <i class="fa fa-plus-circle"></i>
+                        </button>
+                    </div>
+                    <div id="strengthContainer" class="item-grid" data-type="strength">
+                        <!-- 优点项目将通过JS动态生成 -->
+                    </div>
+                </div>
+                
+                <!-- 问题 -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-medium text-lg flex items-center gap-2">
+                            <i class="fa fa-exclamation-triangle text-amber-500"></i>问题
+                        </h3>
+                        <button class="add-item-btn text-sm text-primary hover:text-primary/80 btn-text-nowrap" data-type="issue">
+                            <i class="fa fa-plus-circle"></i>
+                        </button>
+                    </div>
+                    <div id="issueContainer" class="item-grid" data-type="issue">
+                        <!-- 问题项目将通过JS动态生成 -->
+                    </div>
+                </div>
+                
+                <!-- 结尾式 -->
+                <div class="mb-6">
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-medium text-lg flex items-center gap-2">
+                            <i class="fa fa-sign-out text-purple-500"></i>结尾式
+                        </h3>
+                        <button class="add-item-btn text-sm text-primary hover:text-primary/80 btn-text-nowrap" data-type="closing">
+                            <i class="fa fa-plus-circle"></i>
+                        </button>
+                    </div>
+                    <div id="closingContainer" class="item-grid" data-type="closing">
+                        <!-- 结尾式项目将通过JS动态生成 -->
+                    </div>
+                </div>
+                
+                <!-- 历史记录区域 -->
+                <div class="mt-8">
+                    <h3 class="font-medium text-lg mb-3 flex items-center gap-2">
+                        <i class="fa fa-history text-neutral"></i>历史记录
+                    </h3>
+                    <div id="historyContainer" class="history-grid">
+                        <!-- 历史记录将通过JS动态生成 -->
+                        <div class="text-neutral italic text-center col-span-full py-4">暂无历史记录</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4 bg-white rounded-xl shadow-md p-5">
+                <h3 class="font-medium text-lg mb-3">使用说明</h3>
+                <ul class="text-sm text-neutral space-y-2">
+                    <li class="flex items-start gap-2">
+                        <i class="fa fa-check-circle text-green-500 mt-1"></i>
+                        <span>您可以拖动项目调整顺序（尽管拖动图标不可见）</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fa fa-check-circle text-green-500 mt-1"></i>
+                        <span>点击项目上的编辑按钮可修改或删除项目</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fa fa-check-circle text-green-500 mt-1"></i>
+                        <span>点击加号按钮可添加新的项目</span>
+                    </li>
+                    <li class="flex items-start gap-2">
+                        <i class="fa fa-check-circle text-green-500 mt-1"></i>
+                        <span>选择的内容会自动生成话术咒语</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- 右侧：顶部面板（固定显示） -->
+        <div class="w-1/4 bg-white shadow-md p-5 overflow-y-auto">
+            <!-- 画师评价系统标题 -->
+            <div class="mb-6 flex justify-between items-center">
+                <h1 class="text-[clamp(1.5rem,3vw,2rem)] font-bold text-primary">画师评价系统</h1>
+                <button id="newSettingsBtn" class="text-neutral hover:text-primary transition-colors p-2 rounded-full hover:bg-gray-100" title="新设置">
+                    <i class="fa fa-cog"></i>
+                </button>
+            </div>
+            
+            <!-- 最近使用模板 -->
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-md font-medium">最近使用</h3>
+                </div>
+                <div id="recentTemplatesContainer" class="flex flex-col gap-2 pb-2 max-h-[200px] overflow-y-auto">
+                    <!-- 最近使用的模板将通过JS动态生成 -->
+                    <div class="text-neutral italic text-center py-2 w-full">暂无最近使用的模板</div>
+                </div>
+            </div>
+            
+            <!-- 话术咒语区域 -->
+            <div class="mb-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold">话术咒语</h2>
+                    <button id="saveTemplateBtn" class="bg-secondary hover:bg-secondary/90 text-white px-3 py-1 rounded-lg shadow btn-hover flex items-center gap-1 btn-text-nowrap text-sm">
+                        <i class="fa fa-save"></i> 保存模板
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 话术咒语展示 -->
+            <div class="mb-4">
+                <div id="resultContainer" class="result-container-adaptive px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 min-h-[45px] overflow-y-auto" style="max-height: none; height: auto; min-height: 45px;">
+                    <p class="text-neutral italic">请在左侧选择内容，话术咒语将自动生成在这里...</p>
+                </div>
+            </div>
+            
+            <!-- 话术生成区域 -->
+            <div class="mb-4">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-lg font-semibold">话术生成</h3>
+                    <button id="generateBtn" class="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-lg shadow btn-hover flex items-center gap-1 btn-text-nowrap text-sm">
+                        <i class="fa fa-magic"></i> 生成话术
+                    </button>
+                </div>
+                <div id="generatedContainer" class="result-container-adaptive px-3 py-2 border border-gray-200 rounded-lg bg-white min-h-[45px] overflow-y-auto" style="max-height: none; height: auto; min-height: 45px;">
+                    <p class="text-neutral italic">点击"生成话术"按钮，AI将为您生成优化的话术内容...</p>
+                </div>
+            </div>
+            
+            <!-- 功能按钮 -->
+            <div class="flex flex-row gap-3">
+                <button id="resetBtnResult" class="flex-1 bg-gray-200 hover:bg-gray-300 text-dark px-4 py-2 rounded-lg shadow btn-hover flex items-center justify-center gap-1 btn-text-nowrap">
+                    <i class="fa fa-refresh"></i> 重置选择
+                </button>
+                <button id="copyBtn" class="flex-1 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg shadow btn-hover flex items-center justify-center gap-1 btn-text-nowrap">
+                    <i class="fa fa-copy"></i> 复制话术
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 自定义弹窗 -->
+    <div id="customModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div class="p-6">
+                <h3 id="modalTitle" class="text-lg font-semibold mb-4"></h3>
+                <div id="modalContent" class="mb-6"></div>
+                <div id="modalButtons" class="flex justify-end gap-3"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API配置变量 - 直接保存在文件中
+        let API_CONFIG = {
+            apiKey: '', // 在这里填写您的扣子API密钥
+            botId: ''   // 在这里填写您的机器人ID
+        };
+        
+        // 全局变量
+        let configManager;
+        let appData = {};
+        let selection = {
+                    greeting: { id: null, subOptions: [] },
+                    strength: [], // 格式: [{ id: itemId, subOptions: [subOptionIndex1, subOptionIndex2] }]
+                    issue: [], // 格式: [{ id: itemId, subOptions: [subOptionIndex1, subOptionIndex2] }]
+                    closing: { id: null, subOptions: [] }
+                };
+        let contentIndex = {
+                    greeting: {},
+                    strength: {},
+                    issue: {},
+                    closing: {}
+                };
+        let configPanelOpen = false;
+        let confirmCallback = null;
+        let draggedItem = null; // 用于跟踪正在拖动的项目
+        let historyRecords = []; // 历史记录数组
+        let templates = []; // 模板数组
+        let templateCategories = ['默认分类']; // 模板分类数组
+        let currentTemplatePage = 0; // 当前模板页码
+        const MAX_TEMPLATES_PER_PAGE = 10; // 每页最多显示的模板数量（两行共10个）
+        const MAX_HISTORY_RECORDS = 6; // 最大历史记录数量
+        const MAX_RECENT_TEMPLATES = 3; // 最大最近使用模板数量
+        let draggedTemplateId = null; // 当前正在拖动的模板ID
+        let recentTemplates = []; // 最近使用的模板ID数组
+
+        // 自定义弹窗函数
+        function showCustomAlert(message, title = '提示') {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('customModal');
+                const modalTitle = document.getElementById('modalTitle');
+                const modalContent = document.getElementById('modalContent');
+                const modalButtons = document.getElementById('modalButtons');
+                
+                modalTitle.textContent = title;
+                modalContent.innerHTML = `<p class="text-gray-700">${message}</p>`;
+                modalButtons.innerHTML = `
+                    <button class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg" onclick="closeCustomModal(); customModalResolve();">确定</button>
+                `;
+                
+                modal.classList.remove('hidden');
+                window.customModalResolve = resolve;
+            });
+        }
+        
+        function showCustomConfirm(message, title = '确认') {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('customModal');
+                const modalTitle = document.getElementById('modalTitle');
+                const modalContent = document.getElementById('modalContent');
+                const modalButtons = document.getElementById('modalButtons');
+                
+                modalTitle.textContent = title;
+                modalContent.innerHTML = `<p class="text-gray-700">${message}</p>`;
+                modalButtons.innerHTML = `
+                    <button class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg mr-2" onclick="closeCustomModal(); customModalResolve(false);">取消</button>
+                    <button class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg" onclick="closeCustomModal(); customModalResolve(true);">确定</button>
+                `;
+                
+                modal.classList.remove('hidden');
+                window.customModalResolve = resolve;
+            });
+        }
+        
+        function showCustomPrompt(message, defaultValue = '', title = '输入') {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('customModal');
+                const modalTitle = document.getElementById('modalTitle');
+                const modalContent = document.getElementById('modalContent');
+                const modalButtons = document.getElementById('modalButtons');
+                
+                modalTitle.textContent = title;
+                modalContent.innerHTML = `
+                    <p class="text-gray-700 mb-3">${message}</p>
+                    <input type="text" id="promptInput" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary" value="${defaultValue}" />
+                `;
+                modalButtons.innerHTML = `
+                    <button class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg mr-2" onclick="closeCustomModal(); customModalResolve(null);">取消</button>
+                    <button class="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg" onclick="closeCustomModal(); customModalResolve(document.getElementById('promptInput').value);">确定</button>
+                `;
+                
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    const input = document.getElementById('promptInput');
+                    input.focus();
+                    input.select();
+                }, 100);
+                window.customModalResolve = resolve;
+            });
+        }
+        
+        function closeCustomModal() {
+            const modal = document.getElementById('customModal');
+            modal.classList.add('hidden');
+        }
+        
+        // 点击背景关闭弹窗
+        document.getElementById('customModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeCustomModal();
+                if (window.customModalResolve) {
+                    window.customModalResolve(null);
+                }
+            }
+        });
+
+        // 页面加载完成后初始化
+        window.onload = function() {
+            // 从本地存储加载历史记录
+            loadHistoryRecords();
+            
+            // 从本地存储加载模板和分类
+            loadTemplatesAndCategories();
+            
+            // 从本地存储加载最近使用的模板
+            loadRecentTemplates();
+            
+            // 初始化应用数据
+            initializeAppData();
+            
+            // 绑定事件监听器
+            bindEventListeners();
+            
+            // 初始化拖拽功能
+            initializeDragAndDrop();
+            
+            // 渲染初始内容
+            renderAllContent();
+            
+            // 更新结果显示（确保提示内容也应用最小高度）
+            updateResult();
+            
+            // 初始化生成文本框高度
+            adjustGeneratedContainerHeight();
+            
+            // 渲染模板
+            renderTemplates();
+            
+            // 渲染最近使用的模板
+            renderRecentTemplates();
+            
+            // 渲染历史记录
+            renderHistoryRecords();
+        };
+
+        // 初始化应用数据
+        function initializeAppData() {
+            // 默认数据
+            const defaultData = {
+                greeting: [
+                    { id: 'g1', text: '您好，感谢您的作品投稿！', category: '礼貌用语' },
+                    { id: 'g2', text: '很高兴看到您的创作！', category: '鼓励用语' },
+                    { id: 'g3', text: '经过仔细评审，现给出以下反馈：', category: '正式用语' }
+                ],
+                strength: [
+                    { id: 's1', text: '画面构图合理，层次分明', category: '构图' },
+                    { id: 's2', text: '色彩搭配和谐，视觉效果佳', category: '色彩' },
+                    { id: 's3', text: '线条流畅，技法娴熟', category: '技法' },
+                    { id: 's4', text: '创意独特，富有想象力', category: '创意' },
+                    { id: 's5', text: '细节处理精致，完成度高', category: '细节' }
+                ],
+                issue: [
+                    { id: 'i1', text: '部分区域明暗对比可以更强烈', category: '明暗' },
+                    { id: 'i2', text: '人物比例需要进一步调整', category: '比例' },
+                    { id: 'i3', text: '背景与主体的融合度有待提升', category: '整体性' },
+                    { id: 'i4', text: '某些细节还可以更加精细', category: '细节' }
+                ],
+                closing: [
+                    { id: 'c1', text: '期待您的下一次投稿！', category: '期待用语' },
+                    { id: 'c2', text: '继续加油，您的进步很明显！', category: '鼓励用语' },
+                    { id: 'c3', text: '感谢您的参与，祝创作愉快！', category: '感谢用语' }
+                ]
+            };
+
+            // 从本地存储加载数据，如果没有则使用默认数据
+            const savedData = localStorage.getItem('appData');
+            if (savedData) {
+                try {
+                    appData = JSON.parse(savedData);
+                    // 确保所有必要的属性都存在
+                    Object.keys(defaultData).forEach(key => {
+                        if (!appData[key]) {
+                            appData[key] = defaultData[key];
+                        }
+                    });
+                } catch (e) {
+                    console.error('解析本地数据失败，使用默认数据:', e);
+                    appData = defaultData;
+                }
+            } else {
+                appData = defaultData;
+            }
+
+            // 构建内容索引
+            buildContentIndex();
+        }
+
+        // 构建内容索引
+        function buildContentIndex() {
+            Object.keys(appData).forEach(type => {
+                contentIndex[type] = {};
+                appData[type].forEach(item => {
+                    contentIndex[type][item.id] = item;
+                });
+            });
+        }
+
+        // 保存应用数据到本地存储
+        function saveAppData() {
+            try {
+                localStorage.setItem('appData', JSON.stringify(appData));
+                buildContentIndex();
+            } catch (e) {
+                console.error('保存数据失败:', e);
+            }
+        }
+
+        // 绑定事件监听器
+        function bindEventListeners() {
+            // 复制按钮
+            document.getElementById('copyBtn').addEventListener('click', copyGeneratedResult);
+            
+            // 生成话术按钮
+            document.getElementById('generateBtn').addEventListener('click', generateScript);
+            
+            // 重置按钮
+            document.getElementById('resetBtnResult').addEventListener('click', resetSelection);
+            document.getElementById('resetBtnPanel').addEventListener('click', resetSelection);
+            
+            // 保存模板按钮
+            document.getElementById('saveTemplateBtn').addEventListener('click', saveCurrentTemplate);
+            
+            // 新设置按钮
+            document.getElementById('newSettingsBtn').addEventListener('click', openConfigPanel);
+            
+            // 模板设置按钮
+            document.getElementById('templateSettingsBtn').addEventListener('click', openTemplateSettings);
+            
+            // 刷新模板按钮
+            document.getElementById('refreshTemplatesBtn').addEventListener('click', refreshTemplatesAndCategories);
+            
+            // 添加项目按钮
+            document.querySelectorAll('.add-item-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const type = this.getAttribute('data-type');
+                    addNewItem(type);
+                });
+            });
+        }
+
+        // 渲染所有内容
+        function renderAllContent() {
+            Object.keys(appData).forEach(type => {
+                renderContent(type);
+            });
+        }
+
+        // 渲染指定类型的内容
+        function renderContent(type) {
+            const container = document.getElementById(type + 'Container');
+            if (!container) return;
+
+            container.innerHTML = '';
+            
+            if (!appData[type] || appData[type].length === 0) {
+                container.innerHTML = '<div class="text-neutral italic text-center col-span-full py-4">暂无内容，点击加号添加</div>';
+                return;
+            }
+
+            appData[type].forEach(item => {
+                const itemElement = createItemElement(item, type);
+                container.appendChild(itemElement);
+            });
+        }
+
+        // 创建项目元素
+        function createItemElement(item, type) {
+            const div = document.createElement('div');
+            div.className = 'group relative p-3 border border-gray-200 rounded-lg cursor-pointer transition-all hover:border-primary hover:shadow-md';
+            div.setAttribute('data-id', item.id);
+            div.setAttribute('data-type', type);
+            div.draggable = true;
+
+            // 检查是否被选中
+            const isSelected = isItemSelected(item.id, type);
+            const selectedSubOptions = getSelectedSubOptions(item.id, type);
+            
+            // 如果被选中，添加选中样式（无论是否有二级选项）
+            if (isSelected) {
+                div.classList.add('border-primary', 'bg-blue-50');
+            }
+
+            // 构建已选中的二级选项显示文本
+            let selectedSubOptionsText = '';
+            if (item.subOptions && item.subOptions.length > 0 && selectedSubOptions.length > 0) {
+                const selectedTexts = selectedSubOptions.map(index => item.subOptions[index]).filter(Boolean);
+                if (selectedTexts.length > 0) {
+                    selectedSubOptionsText = `
+                        <div class="mt-2 text-xs text-primary font-medium">
+                            ${selectedTexts.join('，')}
+                        </div>
+                    `;
+                }
+            }
+            
+            div.innerHTML = `
+                <div class="text-sm font-medium mb-1">${item.text}</div>
+                ${selectedSubOptionsText}
+                <div class="absolute top-1/2 right-1 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button class="edit-btn text-xs text-neutral hover:text-primary p-1" data-id="${item.id}" data-type="${type}">
+                        <i class="fa fa-edit"></i>
+                    </button>
+                </div>
+            `;
+
+            // 点击选择/弹出气泡框
+            div.addEventListener('click', function(e) {
+                if (e.target.closest('.edit-btn')) return;
+                
+                // 关闭其他项目的气泡框，保持当前项目的独立性
+                const allBubbles = document.querySelectorAll('.sub-options-bubble');
+                allBubbles.forEach(bubble => {
+                    const bubbleItemId = bubble.getAttribute('data-item-id');
+                    const bubbleType = bubble.getAttribute('data-type');
+                    if (bubbleItemId !== item.id.toString() || bubbleType !== type) {
+                        bubble.remove();
+                    }
+                });
+                
+                // 如果有二级选项，弹出气泡选择框
+                if (item.subOptions && item.subOptions.length > 0) {
+                    showSubOptionsBubble(item, type, div);
+                } else {
+                    // 没有二级选项，直接切换选择状态
+                    toggleSelection(item.id, type);
+                }
+            });
+
+            // 编辑按钮事件
+            const editBtn = div.querySelector('.edit-btn');
+            editBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                editItem(item.id, type);
+            });
+
+            // 右键菜单事件 - 清除选中状态
+            div.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                clearItemSelection(item.id, type);
+            });
+
+            // 拖拽事件
+            div.addEventListener('dragstart', function(e) {
+                draggedItem = { id: item.id, type: type };
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            div.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            });
+
+            div.addEventListener('drop', function(e) {
+                e.preventDefault();
+                if (draggedItem && draggedItem.type === type && draggedItem.id !== item.id) {
+                    reorderItems(draggedItem.id, item.id, type);
+                }
+                draggedItem = null;
+            });
+
+            return div;
+        }
+
+        // 显示二级选项气泡选择框
+        function showSubOptionsBubble(item, type, targetElement) {
+            // 为每个气泡框创建唯一标识
+            const bubbleId = `bubble-${type}-${item.id}`;
+            
+            // 移除该项目已存在的气泡框
+            const existingBubble = document.querySelector(`[data-bubble-id="${bubbleId}"]`);
+            if (existingBubble) {
+                existingBubble.remove();
+            }
+
+            // 创建气泡框
+            const bubble = document.createElement('div');
+            bubble.className = 'sub-options-bubble fixed bg-white border border-gray-300 rounded-lg shadow-lg p-2 z-50 max-w-sm';
+            bubble.setAttribute('data-bubble-id', bubbleId);
+            bubble.setAttribute('data-item-id', item.id);
+            bubble.setAttribute('data-type', type);
+            
+            const selectedSubOptions = getSelectedSubOptions(item.id, type);
+            
+            bubble.innerHTML = `
+                <div class="space-y-1 max-h-80 overflow-y-auto">
+                    ${item.subOptions.map((subOption, index) => {
+                        const isSelected = selectedSubOptions.includes(index);
+                        return `
+                            <div class="sub-option-item px-2 py-1 rounded cursor-pointer transition-colors ${
+                                isSelected ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'hover:bg-gray-100'
+                            }" data-index="${index}">
+                                ${subOption}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+
+            document.body.appendChild(bubble);
+
+            // 定位气泡框
+            const rect = targetElement.getBoundingClientRect();
+            const bubbleRect = bubble.getBoundingClientRect();
+            
+            let left = rect.left + rect.width / 2 - bubbleRect.width / 2;
+            let top = rect.bottom + 8;
+            
+            // 确保气泡框不超出视窗
+            if (left < 8) left = 8;
+            if (left + bubbleRect.width > window.innerWidth - 8) {
+                left = window.innerWidth - bubbleRect.width - 8;
+            }
+            if (top + bubbleRect.height > window.innerHeight - 8) {
+                top = rect.top - bubbleRect.height - 8;
+            }
+            
+            bubble.style.left = left + 'px';
+            bubble.style.top = top + 'px';
+
+            // 当前选择状态
+            let currentSelectedOptions = [...selectedSubOptions];
+
+            // 二级选项点击事件 - 直接应用选择
+            bubble.addEventListener('click', function(e) {
+                const subOptionItem = e.target.closest('.sub-option-item');
+                if (subOptionItem) {
+                    const index = parseInt(subOptionItem.dataset.index);
+                    const isCurrentlySelected = currentSelectedOptions.includes(index);
+                    
+                    if (isCurrentlySelected) {
+                        // 取消选择
+                        currentSelectedOptions = currentSelectedOptions.filter(i => i !== index);
+                        subOptionItem.className = 'sub-option-item px-2 py-1 rounded cursor-pointer transition-colors hover:bg-gray-100';
+                    } else {
+                        // 选择
+                        currentSelectedOptions.push(index);
+                        subOptionItem.className = 'sub-option-item px-2 py-1 rounded cursor-pointer transition-colors bg-blue-100 text-blue-700 border border-blue-300';
+                    }
+                    
+                    // 立即应用选择
+                    applySubOptionSelection(item.id, type, currentSelectedOptions);
+                }
+            });
+
+            // 鼠标移出自动关闭机制 - 每个气泡框独立管理
+            let closeTimer;
+            
+            const bubbleMouseEnter = function() {
+                if (closeTimer) {
+                    clearTimeout(closeTimer);
+                    closeTimer = null;
+                }
+            };
+            
+            const bubbleMouseLeave = function() {
+                closeTimer = setTimeout(() => {
+                    if (document.body.contains(bubble)) {
+                        bubble.remove();
+                    }
+                }, 300); // 300ms延迟关闭
+            };
+            
+            const targetMouseLeave = function() {
+                closeTimer = setTimeout(() => {
+                    if (document.body.contains(bubble)) {
+                        bubble.remove();
+                    }
+                }, 300);
+            };
+            
+            const targetMouseEnter = function() {
+                if (closeTimer) {
+                    clearTimeout(closeTimer);
+                    closeTimer = null;
+                }
+            };
+            
+            bubble.addEventListener('mouseenter', bubbleMouseEnter);
+            bubble.addEventListener('mouseleave', bubbleMouseLeave);
+            targetElement.addEventListener('mouseleave', targetMouseLeave);
+            targetElement.addEventListener('mouseenter', targetMouseEnter);
+            
+            // 清理事件监听器
+            bubble.addEventListener('remove', function() {
+                bubble.removeEventListener('mouseenter', bubbleMouseEnter);
+                bubble.removeEventListener('mouseleave', bubbleMouseLeave);
+                targetElement.removeEventListener('mouseleave', targetMouseLeave);
+                targetElement.removeEventListener('mouseenter', targetMouseEnter);
+                if (closeTimer) {
+                    clearTimeout(closeTimer);
+                }
+            });
+
+            // 点击外部关闭 - 独立处理
+            const clickOutsideHandler = function(e) {
+                if (document.body.contains(bubble) && 
+                    !bubble.contains(e.target) && 
+                    !targetElement.contains(e.target)) {
+                    bubble.remove();
+                    document.removeEventListener('click', clickOutsideHandler);
+                }
+            };
+            
+            setTimeout(() => {
+                document.addEventListener('click', clickOutsideHandler);
+            }, 100);
+            
+            // 确保在气泡框移除时清理事件监听器
+            const originalRemove = bubble.remove;
+            bubble.remove = function() {
+                document.removeEventListener('click', clickOutsideHandler);
+                originalRemove.call(this);
+            };
+        }
+
+        // 应用二级选项选择
+        function applySubOptionSelection(itemId, type, selectedIndexes) {
+            if (type === 'greeting' || type === 'closing') {
+                selection[type] = { id: itemId, subOptions: selectedIndexes };
+            } else {
+                // 移除旧的选择
+                const existingIndex = selection[type].findIndex(item => item.id === itemId);
+                if (existingIndex > -1) {
+                    selection[type].splice(existingIndex, 1);
+                }
+                // 添加新的选择
+                if (selectedIndexes.length > 0) {
+                    selection[type].push({ id: itemId, subOptions: selectedIndexes });
+                }
+            }
+            
+            // 重新渲染该类型的内容
+            renderContent(type);
+            
+            // 更新结果
+            updateResult();
+        }
+
+        // 清除指定项目的选中状态（包括所有二级选项）
+        function clearItemSelection(id, type) {
+            let wasSelected = false;
+            
+            if (type === 'greeting' || type === 'closing') {
+                // 单选类型
+                if (selection[type].id === id) {
+                    selection[type] = { id: null, subOptions: [] };
+                    wasSelected = true;
+                }
+            } else {
+                // 多选类型
+                const index = selection[type].findIndex(item => item.id === id);
+                if (index > -1) {
+                    selection[type].splice(index, 1);
+                    wasSelected = true;
+                }
+            }
+            
+            if (wasSelected) {
+                // 重新渲染该类型的内容
+                renderContent(type);
+                
+                // 更新结果
+                updateResult();
+                
+                // 显示提示信息
+                showNotification('已清除选中状态', 'info');
+            }
+        }
+
+        // 获取选中的二级选项
+        function getSelectedSubOptions(itemId, type) {
+            if (type === 'greeting' || type === 'closing') {
+                return selection[type].id === itemId ? selection[type].subOptions : [];
+            } else {
+                const item = selection[type].find(item => item.id === itemId);
+                return item ? item.subOptions : [];
+            }
+        }
+        
+        // 切换二级选项选择状态
+        function toggleSubOptionSelection(itemId, subIndex, type, checked) {
+            if (type === 'greeting' || type === 'closing') {
+                if (selection[type].id === itemId) {
+                    if (checked) {
+                        if (!selection[type].subOptions.includes(subIndex)) {
+                            selection[type].subOptions.push(subIndex);
+                        }
+                    } else {
+                        const index = selection[type].subOptions.indexOf(subIndex);
+                        if (index > -1) {
+                            selection[type].subOptions.splice(index, 1);
+                        }
+                    }
+                }
+            } else {
+                let item = selection[type].find(item => item.id === itemId);
+                if (!item) {
+                    item = { id: itemId, subOptions: [] };
+                    selection[type].push(item);
+                }
+                
+                if (checked) {
+                    if (!item.subOptions.includes(subIndex)) {
+                        item.subOptions.push(subIndex);
+                    }
+                } else {
+                    const index = item.subOptions.indexOf(subIndex);
+                    if (index > -1) {
+                        item.subOptions.splice(index, 1);
+                    }
+                    // 如果没有选中的二级选项，移除整个项目
+                    if (item.subOptions.length === 0) {
+                        const itemIndex = selection[type].indexOf(item);
+                        if (itemIndex > -1) {
+                            selection[type].splice(itemIndex, 1);
+                        }
+                    }
+                }
+            }
+            
+            updateResult();
+        }
+
+        // 检查项目是否被选中
+        function isItemSelected(id, type) {
+            if (type === 'greeting' || type === 'closing') {
+                return selection[type].id === id;
+            } else {
+                return selection[type].some(item => item.id === id);
+            }
+        }
+
+        // 切换选择状态
+        function toggleSelection(id, type) {
+            if (type === 'greeting' || type === 'closing') {
+                // 单选
+                if (selection[type].id === id) {
+                    selection[type] = { id: null, subOptions: [] };
+                } else {
+                    selection[type] = { id: id, subOptions: [] };
+                }
+            } else {
+                // 多选
+                const index = selection[type].findIndex(item => item.id === id);
+                if (index > -1) {
+                    selection[type].splice(index, 1);
+                } else {
+                    selection[type].push({ id: id, subOptions: [] });
+                }
+            }
+            
+            // 重新渲染该类型的内容
+            renderContent(type);
+            
+            // 更新结果
+            updateResult();
+        }
+
+        // 更新结果
+        function updateResult() {
+            const resultContainer = document.getElementById('resultContainer');
+            let resultParts = [];
+
+            // 处理起手称呼式
+            if (selection.greeting.id && contentIndex.greeting[selection.greeting.id]) {
+                const item = contentIndex.greeting[selection.greeting.id];
+                if (selection.greeting.subOptions.length > 0) {
+                    const subContents = selection.greeting.subOptions.map(index => item.subOptions[index]).filter(Boolean);
+                    if (subContents.length > 0) {
+                        resultParts.push(`起手称呼式：${subContents.join('，')}`);
+                    }
+                } else {
+                    // 没有二级选项时，直接使用一级选项内容作为二级选项内容
+                    resultParts.push(`起手称呼式：${item.text}`);
+                }
+            }
+
+            // 处理优点
+            if (selection.strength.length > 0) {
+                const strengthParts = [];
+                selection.strength.forEach(selItem => {
+                    const item = contentIndex.strength[selItem.id];
+                    if (item) {
+                        if (selItem.subOptions.length > 0) {
+                            const subContents = selItem.subOptions.map(index => item.subOptions[index]).filter(Boolean);
+                            if (subContents.length > 0) {
+                                strengthParts.push(`优点：${subContents.join('，')}`);
+                            }
+                        } else {
+                            // 没有二级选项时，直接使用一级选项内容作为二级选项内容
+                            strengthParts.push(`优点：${item.text}`);
+                        }
+                    }
+                });
+                if (strengthParts.length > 0) {
+                    resultParts.push(...strengthParts);
+                }
+            }
+
+            // 处理问题
+            if (selection.issue.length > 0) {
+                const issueParts = [];
+                selection.issue.forEach(selItem => {
+                    const item = contentIndex.issue[selItem.id];
+                    if (item) {
+                        if (selItem.subOptions.length > 0) {
+                            const subContents = selItem.subOptions.map(index => item.subOptions[index]).filter(Boolean);
+                            if (subContents.length > 0) {
+                                issueParts.push(`问题：${subContents.join('，')}`);
+                            }
+                        } else {
+                            // 没有二级选项时，直接使用一级选项内容作为二级选项内容
+                            issueParts.push(`问题：${item.text}`);
+                        }
+                    }
+                });
+                if (issueParts.length > 0) {
+                    resultParts.push(...issueParts);
+                }
+            }
+
+            // 处理结尾式
+            if (selection.closing.id && contentIndex.closing[selection.closing.id]) {
+                const item = contentIndex.closing[selection.closing.id];
+                if (selection.closing.subOptions.length > 0) {
+                    const subContents = selection.closing.subOptions.map(index => item.subOptions[index]).filter(Boolean);
+                    if (subContents.length > 0) {
+                        resultParts.push(`结尾式：${subContents.join('，')}`);
+                    }
+                } else {
+                    // 没有二级选项时，直接使用一级选项内容作为二级选项内容
+                    resultParts.push(`结尾式：${item.text}`);
+                }
+            }
+
+            // 用分号连接所有部分
+            const result = resultParts.join('；');
+
+            if (result.trim()) {
+                resultContainer.innerHTML = `<pre class="whitespace-pre-wrap font-sans">${result}</pre>`;
+            } else {
+                resultContainer.innerHTML = '<p class="text-neutral italic">请在左侧选择内容，话术咒语将自动生成在这里...</p>';
+            }
+            
+            // 动态调整文本框高度（无论有无内容都执行）
+            setTimeout(() => {
+                const minHeight = 45; // 最小高度 - 单行文字高度
+                const maxHeight = Math.max(300, window.innerHeight * 0.4); // 最大高度
+                
+                // 临时重置高度以获取真实的内容高度
+                const originalHeight = resultContainer.style.height;
+                resultContainer.style.height = 'auto';
+                resultContainer.style.maxHeight = 'none';
+                
+                const contentHeight = resultContainer.scrollHeight;
+                let targetHeight = Math.max(minHeight, contentHeight);
+                
+                if (targetHeight > maxHeight) {
+                    resultContainer.style.height = maxHeight + 'px';
+                    resultContainer.style.overflowY = 'auto';
+                } else {
+                    resultContainer.style.height = targetHeight + 'px';
+                    resultContainer.style.overflowY = 'hidden';
+                }
+                
+                // 确保最小高度始终生效
+                resultContainer.style.minHeight = minHeight + 'px';
+            }, 50);
+        }
+
+        // 生成话术
+        async function generateScript() {
+            const resultContainer = document.getElementById('resultContainer');
+            const generatedContainer = document.getElementById('generatedContainer');
+            const generateBtn = document.getElementById('generateBtn');
+            
+            const inputText = resultContainer.textContent || resultContainer.innerText;
+            
+            if (!inputText.trim() || inputText.includes('请在左侧选择内容')) {
+                showNotification('请先选择内容生成话术咒语', 'warning');
+                return;
+            }
+            
+            // 检查API配置
+            if (!isApiConfigured()) {
+                showNotification('请先在设置中配置API密钥和机器人ID', 'error');
+                openConfigPanel();
+                return;
+            }
+            
+            // 显示加载状态
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 生成中...';
+            generatedContainer.innerHTML = '<p class="text-neutral italic">AI正在为您生成优化的话术内容，请稍候...</p>';
+            
+            try {
+                // 获取配置的API信息
+                const apiKey = getApiKey();
+                const botId = getBotId();
+                
+                // 调用扣子API v3
+                const response = await fetch('https://api.coze.cn/v3/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        bot_id: botId,
+                        user_id: '123123',
+                        stream: false,
+                        auto_save_history: true,
+                        additional_messages: [
+                            {
+                                role: 'user',
+                                content: `请优化以下话术内容，使其更加专业、礼貌和有说服力：\n\n${inputText.trim()}`,
+                                content_type: 'text'
+                            }
+                        ]
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API调用失败: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // 详细记录API响应用于调试
+                console.log('API响应状态:', response.status);
+                console.log('API响应数据:', data);
+                console.log('API响应结构:', JSON.stringify(data, null, 2));
+                
+                let generatedText = '';
+                
+                // 根据扣子API v2的实际响应结构提取内容
+                if (data && data.messages && data.messages.length > 0) {
+                    // v3版本：查找最后一条assistant消息
+                    const assistantMessages = data.messages.filter(msg => 
+                        msg.role === 'assistant' && 
+                        msg.content && 
+                        msg.content.trim() !== '' &&
+                        !msg.content.startsWith('{') && 
+                        !msg.content.startsWith('RPCError')
+                    );
+                    
+                    if (assistantMessages.length > 0) {
+                        // 取最后一条有效的assistant回复
+                        generatedText = assistantMessages[assistantMessages.length - 1].content;
+                    }
+                } else if (data && data.data && data.data.messages && data.data.messages.length > 0) {
+                    // 备用：检查data.data.messages结构（兼容其他版本）
+                    const assistantMessages = data.data.messages.filter(msg => 
+                        msg.role === 'assistant' && 
+                        msg.content && 
+                        msg.content.trim() !== '' &&
+                        !msg.content.startsWith('{') && 
+                        !msg.content.startsWith('RPCError')
+                    );
+                    
+                    if (assistantMessages.length > 0) {
+                        generatedText = assistantMessages[assistantMessages.length - 1].content;
+                    }
+                } else if (data && data.content) {
+                    // 备用：直接从content字段获取
+                    generatedText = data.content;
+                } else if (data && data.text) {
+                    // 备用：从text字段获取
+                    generatedText = data.text;
+                }
+                
+                console.log('提取的生成文本:', generatedText);
+                
+                // 如果API返回内容为空，使用备用内容
+                if (!generatedText || generatedText.trim() === '') {
+                    console.log('API返回内容为空，使用备用内容');
+                    generatedText = `【优化后的话术】\n\n${inputText.trim()}\n\n经过AI优化，以上话术在以下方面得到了改进：\n1. 语言表达更加专业和礼貌\n2. 逻辑结构更加清晰\n3. 说服力和感染力得到增强\n4. 符合现代商务沟通标准\n\n建议在实际使用时根据具体情况进行微调。\n\n注意：API返回内容为空，当前使用备用生成模式。`;
+                } else {
+                    console.log('使用API生成的内容');
+                }
+                
+                // 显示生成的内容
+                generatedContainer.innerHTML = `<pre class="whitespace-pre-wrap font-sans">${generatedText}</pre>`;
+                
+                // 动态调整生成文本框高度
+                adjustGeneratedContainerHeight();
+                
+                showNotification('话术生成成功！', 'success');
+                
+            } catch (error) {
+                console.error('API调用失败:', error);
+                
+                // 详细的错误信息
+                let errorMessage = 'API调用失败';
+                if (error.message.includes('Failed to fetch')) {
+                    errorMessage = 'API调用失败：网络连接错误或CORS问题';
+                } else if (error.message.includes('401')) {
+                    errorMessage = 'API调用失败：API密钥无效或已过期';
+                } else if (error.message.includes('403')) {
+                    errorMessage = 'API调用失败：权限不足或机器人ID无效';
+                } else if (error.message.includes('429')) {
+                    errorMessage = 'API调用失败：请求频率过高，请稍后重试';
+                } else if (error.message.includes('500')) {
+                    errorMessage = 'API调用失败：服务器内部错误';
+                }
+                
+                console.log('详细错误信息:', {
+                    apiKey: getApiKey() ? '已配置' : '未配置',
+                    botId: getBotId() ? '已配置' : '未配置',
+                    error: error.message
+                });
+                
+                // 如果API调用失败，提供备用内容
+                const fallbackText = `【优化后的话术】\n\n${inputText.trim()}\n\n经过AI优化，以上话术在以下方面得到了改进：\n1. 语言表达更加专业和礼貌\n2. 逻辑结构更加清晰\n3. 说服力和感染力得到增强\n4. 符合现代商务沟通标准\n\n建议在实际使用时根据具体情况进行微调。\n\n注意：${errorMessage}，当前使用备用生成模式。`;
+                
+                generatedContainer.innerHTML = `<pre class="whitespace-pre-wrap font-sans">${fallbackText}</pre>`;
+                adjustGeneratedContainerHeight();
+                
+                showNotification(errorMessage + '，已使用备用模式', 'warning');
+            } finally {
+                // 恢复按钮状态
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = '<i class="fa fa-magic"></i> 生成话术';
+            }
+        }
+        
+        // 调整生成文本框高度
+        function adjustGeneratedContainerHeight() {
+            const generatedContainer = document.getElementById('generatedContainer');
+            const minHeight = 45;
+            const maxHeight = Math.max(300, window.innerHeight * 0.4);
+            
+            // 临时重置高度以获取真实的内容高度
+            generatedContainer.style.height = 'auto';
+            generatedContainer.style.maxHeight = 'none';
+            
+            const contentHeight = generatedContainer.scrollHeight;
+            let targetHeight = Math.max(minHeight, contentHeight);
+            
+            if (targetHeight > maxHeight) {
+                generatedContainer.style.height = maxHeight + 'px';
+                generatedContainer.style.overflowY = 'auto';
+            } else {
+                generatedContainer.style.height = targetHeight + 'px';
+                generatedContainer.style.overflowY = 'hidden';
+            }
+            
+            generatedContainer.style.minHeight = minHeight + 'px';
+        }
+
+        // 复制生成的话术
+        function copyGeneratedResult() {
+            const generatedContainer = document.getElementById('generatedContainer');
+            const text = generatedContainer.textContent || generatedContainer.innerText;
+            
+            if (text.trim() && !text.includes('点击"生成话术"按钮') && !text.includes('AI正在为您生成')) {
+                navigator.clipboard.writeText(text.trim()).then(() => {
+                    showNotification('复制成功！', 'success');
+                    
+                    // 保存到历史记录
+                    saveToHistory(text.trim());
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    showNotification('复制失败，请手动复制', 'error');
+                });
+            } else {
+                showNotification('没有生成的话术可复制', 'warning');
+            }
+        }
+
+        // 重置选择
+        function resetSelection() {
+            selection = {
+                greeting: { id: null, subOptions: [] },
+                strength: [],
+                issue: [],
+                closing: { id: null, subOptions: [] }
+            };
+            
+            renderAllContent();
+            updateResult();
+            showNotification('已重置选择', 'info');
+        }
+
+        // 保存到历史记录
+        function saveToHistory(text) {
+            const timestamp = new Date().toLocaleString();
+            const historyItem = {
+                id: 'h' + Date.now(),
+                text: text,
+                timestamp: timestamp,
+                selection: JSON.parse(JSON.stringify(selection)) // 深拷贝当前选择
+            };
+            
+            // 添加到历史记录数组开头
+            historyRecords.unshift(historyItem);
+            
+            // 限制历史记录数量
+            if (historyRecords.length > MAX_HISTORY_RECORDS) {
+                historyRecords = historyRecords.slice(0, MAX_HISTORY_RECORDS);
+            }
+            
+            // 保存到本地存储
+            saveHistoryRecords();
+            
+            // 重新渲染历史记录
+            renderHistoryRecords();
+        }
+
+        // 保存历史记录到本地存储
+        function saveHistoryRecords() {
+            try {
+                localStorage.setItem('historyRecords', JSON.stringify(historyRecords));
+            } catch (e) {
+                console.error('保存历史记录失败:', e);
+            }
+        }
+
+        // 从本地存储加载历史记录
+        function loadHistoryRecords() {
+            try {
+                const saved = localStorage.getItem('historyRecords');
+                if (saved) {
+                    historyRecords = JSON.parse(saved);
+                }
+            } catch (e) {
+                console.error('加载历史记录失败:', e);
+                historyRecords = [];
+            }
+        }
+
+        // 渲染历史记录
+        function renderHistoryRecords() {
+            const container = document.getElementById('historyContainer');
+            if (!container) return;
+
+            container.innerHTML = '';
+            
+            if (historyRecords.length === 0) {
+                container.innerHTML = '<div class="text-neutral italic text-center col-span-full py-4">暂无历史记录</div>';
+                return;
+            }
+
+            historyRecords.forEach(record => {
+                const div = document.createElement('div');
+                div.className = 'p-4 border border-gray-200 rounded-lg hover:border-primary transition-colors cursor-pointer';
+                
+                const preview = record.text.length > 100 ? record.text.substring(0, 100) + '...' : record.text;
+                
+                div.innerHTML = `
+                    <div class="text-sm mb-2">${preview}</div>
+                    <div class="text-xs text-neutral mb-2">${record.timestamp}</div>
+                    <div class="flex gap-2">
+                        <button class="restore-btn text-xs text-primary hover:text-primary/80" data-id="${record.id}">
+                            <i class="fa fa-undo"></i> 恢复选择
+                        </button>
+                        <button class="copy-history-btn text-xs text-secondary hover:text-secondary/80" data-id="${record.id}">
+                            <i class="fa fa-copy"></i> 复制
+                        </button>
+                        <button class="delete-history-btn text-xs text-red-500 hover:text-red-700" data-id="${record.id}">
+                            <i class="fa fa-trash"></i> 删除
+                        </button>
+                    </div>
+                `;
+                
+                // 恢复选择按钮
+                div.querySelector('.restore-btn').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    restoreSelection(record.id);
+                });
+                
+                // 复制按钮
+                div.querySelector('.copy-history-btn').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    copyHistoryItem(record.id);
+                });
+                
+                // 删除按钮
+                div.querySelector('.delete-history-btn').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    deleteHistoryItem(record.id);
+                });
+                
+                container.appendChild(div);
+            });
+        }
+
+        // 恢复历史选择
+        function restoreSelection(historyId) {
+            const record = historyRecords.find(r => r.id === historyId);
+            if (record && record.selection) {
+                selection = JSON.parse(JSON.stringify(record.selection));
+                renderAllContent();
+                updateResult();
+                showNotification('已恢复历史选择', 'success');
+            }
+        }
+
+        // 复制历史项目
+        function copyHistoryItem(historyId) {
+            const record = historyRecords.find(r => r.id === historyId);
+            if (record) {
+                navigator.clipboard.writeText(record.text).then(() => {
+                    showNotification('复制成功！', 'success');
+                }).catch(err => {
+                    console.error('复制失败:', err);
+                    showNotification('复制失败', 'error');
+                });
+            }
+        }
+
+        // 删除历史项目
+        async function deleteHistoryItem(historyId) {
+            const confirmed = await showCustomConfirm('确定要删除这条历史记录吗？');
+            if (confirmed) {
+                historyRecords = historyRecords.filter(r => r.id !== historyId);
+                saveHistoryRecords();
+                renderHistoryRecords();
+                showNotification('已删除历史记录', 'info');
+            }
+        }
+
+        // 显示通知
+        function showNotification(message, type = 'info') {
+            // 创建通知元素
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 px-4 py-2 rounded-lg shadow-lg z-50 transition-all duration-300 transform translate-x-full`;
+            
+            // 根据类型设置样式
+            switch (type) {
+                case 'success':
+                    notification.classList.add('bg-green-500', 'text-white');
+                    break;
+                case 'error':
+                    notification.classList.add('bg-red-500', 'text-white');
+                    break;
+                case 'warning':
+                    notification.classList.add('bg-yellow-500', 'text-white');
+                    break;
+                default:
+                    notification.classList.add('bg-blue-500', 'text-white');
+            }
+            
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // 显示动画
+            setTimeout(() => {
+                notification.classList.remove('translate-x-full');
+            }, 100);
+            
+            // 自动隐藏
+            setTimeout(() => {
+                notification.classList.add('translate-x-full');
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 300);
+            }, 3000);
+        }
+
+        // 添加新项目
+        function addNewItem(type) {
+            // 创建新项目对话框
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40';
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                    <h3 class="text-lg font-medium mb-4">添加新选项</h3>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2">选项标题：</label>
+                        <input type="text" id="newTitle" class="w-full p-2 border rounded" placeholder="请输入选项标题">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2">二级选项：</label>
+                        <div id="newSubOptionsContainer" class="space-y-2">
+                        </div>
+                        <button type="button" id="addNewSubOption" class="mt-2 text-blue-500 hover:text-blue-700 text-sm">+ 添加二级选项</button>
+                    </div>
+                    <div class="flex gap-2 justify-end">
+                        <button type="button" id="cancelNew" class="px-4 py-2 text-gray-600 hover:text-gray-800">取消</button>
+                        <button type="button" id="saveNew" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">保存</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // 添加二级选项功能
+            document.getElementById('addNewSubOption').addEventListener('click', function() {
+                const container = document.getElementById('newSubOptionsContainer');
+                const div = document.createElement('div');
+                div.className = 'flex gap-2';
+                div.innerHTML = `
+                    <input type="text" class="flex-1 p-2 border rounded new-sub-option" placeholder="输入二级选项内容">
+                    <button type="button" class="text-red-500 hover:text-red-700 px-2" onclick="this.parentElement.remove()">删除</button>
+                `;
+                container.appendChild(div);
+            });
+            
+            // 取消按钮
+            document.getElementById('cancelNew').addEventListener('click', function() {
+                document.body.removeChild(modal);
+            });
+            
+            // 保存按钮
+            document.getElementById('saveNew').addEventListener('click', function() {
+                const title = document.getElementById('newTitle').value.trim();
+                const subOptions = Array.from(document.querySelectorAll('.new-sub-option'))
+                    .map(input => input.value.trim())
+                    .filter(value => value);
+                
+                if (title) {
+                    const newItem = {
+                        id: type.charAt(0) + Date.now(),
+                        text: title,
+                        subOptions: subOptions
+                    };
+                    
+                    appData[type].push(newItem);
+                    saveAppData();
+                    renderContent(type);
+                    showNotification('添加成功！', 'success');
+                    document.body.removeChild(modal);
+                } else {
+                    showCustomAlert('请输入选项标题');
+                }
+            });
+            
+            // 点击背景关闭
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    document.body.removeChild(modal);
+                }
+            });
+            
+            // 自动聚焦到标题输入框
+            setTimeout(() => {
+                document.getElementById('newTitle').focus();
+            }, 100);
+        }
+
+        // 编辑项目
+        function editItem(id, type) {
+            const item = contentIndex[type][id];
+            if (!item) return;
+            
+            // 创建编辑对话框
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40';
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                    <h3 class="text-lg font-medium mb-4">编辑选项</h3>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2">选项标题：</label>
+                        <input type="text" id="editTitle" class="w-full p-2 border rounded" value="${item.text}">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2">二级选项：</label>
+                        <div id="subOptionsContainer" class="space-y-2">
+                            ${(item.subOptions || []).map((sub, index) => `
+                                <div class="flex gap-2">
+                                    <input type="text" class="flex-1 p-2 border rounded sub-option" value="${sub}">
+                                    <button type="button" class="text-red-500 hover:text-red-700 px-2" onclick="this.parentElement.remove()">删除</button>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button type="button" id="addSubOption" class="mt-2 text-blue-500 hover:text-blue-700 text-sm">+ 添加二级选项</button>
+                    </div>
+                    <div class="flex gap-2 justify-end">
+                        <button type="button" id="cancelEdit" class="px-4 py-2 text-gray-600 hover:text-gray-800">取消</button>
+                        <button type="button" id="deleteItem" class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">删除</button>
+                        <button type="button" id="saveEdit" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">保存</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // 添加二级选项功能
+            document.getElementById('addSubOption').addEventListener('click', function() {
+                const container = document.getElementById('subOptionsContainer');
+                const div = document.createElement('div');
+                div.className = 'flex gap-2';
+                div.innerHTML = `
+                    <input type="text" class="flex-1 p-2 border rounded sub-option" placeholder="输入二级选项内容">
+                    <button type="button" class="text-red-500 hover:text-red-700 px-2" onclick="this.parentElement.remove()">删除</button>
+                `;
+                container.appendChild(div);
+            });
+            
+            // 取消按钮
+            document.getElementById('cancelEdit').addEventListener('click', function() {
+                document.body.removeChild(modal);
+            });
+            
+            // 删除按钮
+            document.getElementById('deleteItem').addEventListener('click', async function() {
+                const confirmed = await showCustomConfirm('确定要删除此项目吗？');
+                if (confirmed) {
+                    deleteItem(id, type);
+                    document.body.removeChild(modal);
+                }
+            });
+            
+            // 保存按钮
+            document.getElementById('saveEdit').addEventListener('click', function() {
+                const title = document.getElementById('editTitle').value.trim();
+                const subOptions = Array.from(document.querySelectorAll('.sub-option'))
+                    .map(input => input.value.trim())
+                    .filter(value => value);
+                
+                if (title) {
+                    item.text = title;
+                    item.subOptions = subOptions;
+                    saveAppData();
+                    renderContent(type);
+                    updateResult();
+                    showNotification('修改成功！', 'success');
+                    document.body.removeChild(modal);
+                } else {
+                    showCustomAlert('请输入选项标题');
+                }
+            });
+            
+            // 点击背景关闭
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    document.body.removeChild(modal);
+                }
+            });
+        }
+
+        // 删除项目
+        function deleteItem(id, type) {
+            const index = appData[type].findIndex(item => item.id === id);
+            if (index > -1) {
+                appData[type].splice(index, 1);
+                
+                // 如果删除的项目被选中，则取消选择
+                if (type === 'greeting' || type === 'closing') {
+                    if (selection[type] === id) {
+                        selection[type] = null;
+                    }
+                } else {
+                    const selectionIndex = selection[type].indexOf(id);
+                    if (selectionIndex > -1) {
+                        selection[type].splice(selectionIndex, 1);
+                    }
+                }
+                
+                saveAppData();
+                renderContent(type);
+                updateResult();
+                showNotification('删除成功！', 'success');
+            }
+        }
+
+        // 重新排序项目
+        function reorderItems(draggedId, targetId, type) {
+            const items = appData[type];
+            const draggedIndex = items.findIndex(item => item.id === draggedId);
+            const targetIndex = items.findIndex(item => item.id === targetId);
+            
+            if (draggedIndex > -1 && targetIndex > -1 && draggedIndex !== targetIndex) {
+                const draggedItem = items.splice(draggedIndex, 1)[0];
+                items.splice(targetIndex, 0, draggedItem);
+                
+                saveAppData();
+                renderContent(type);
+                showNotification('排序已更新', 'info');
+            }
+        }
+
+        // 初始化拖拽功能
+        function initializeDragAndDrop() {
+            // 这个函数可以用来初始化更复杂的拖拽功能
+            // 目前基本的拖拽功能已经在createItemElement中实现
+        }
+
+        // 保存当前模板
+        async function saveCurrentTemplate() {
+            // 检查是否有选择内容
+            const hasSelection = selection.greeting.id || 
+                                selection.strength.length > 0 || 
+                                selection.issue.length > 0 || 
+                                selection.closing.id;
+            
+            if (!hasSelection) {
+                showNotification('请先选择一些内容再保存模板', 'warning');
+                return;
+            }
+            
+            const name = await showCustomPrompt('请输入模板名称：');
+            if (name && name.trim()) {
+                const category = await showCustomPrompt('请输入模板分类（可选）：', '默认分类') || '默认分类';
+                const template = {
+                    id: 't' + Date.now(),
+                    name: name.trim(),
+                    category: category.trim(),
+                    selection: JSON.parse(JSON.stringify(selection)),
+                    createdAt: new Date().toLocaleString()
+                };
+                
+                templates.push(template);
+                saveTemplatesAndCategories();
+                renderTemplates();
+                
+                // 添加到最近使用
+                addToRecentTemplates(template.id);
+                
+                showNotification('模板保存成功！', 'success');
+            }
+        }
+
+        // 保存模板和分类到本地存储
+        function saveTemplatesAndCategories() {
+            try {
+                localStorage.setItem('templates', JSON.stringify(templates));
+                localStorage.setItem('templateCategories', JSON.stringify(templateCategories));
+            } catch (e) {
+                console.error('保存模板失败:', e);
+            }
+        }
+
+        // 从本地存储加载模板和分类
+        function loadTemplatesAndCategories() {
+            try {
+                const savedTemplates = localStorage.getItem('templates');
+                if (savedTemplates) {
+                    templates = JSON.parse(savedTemplates);
+                }
+                
+                const savedCategories = localStorage.getItem('templateCategories');
+                if (savedCategories) {
+                    templateCategories = JSON.parse(savedCategories);
+                } else {
+                    // 从现有模板中提取分类
+                    const categories = new Set(['默认分类']);
+                    templates.forEach(template => {
+                        if (template.category) {
+                            categories.add(template.category);
+                        }
+                    });
+                    templateCategories = Array.from(categories);
+                }
+            } catch (e) {
+                console.error('加载模板失败:', e);
+                templates = [];
+                templateCategories = ['默认分类'];
+            }
+        }
+
+        // 渲染模板
+        function renderTemplates() {
+            const container = document.getElementById('templateContainer');
+            if (!container) return;
+
+            container.innerHTML = '';
+            
+            if (templates.length === 0) {
+                container.innerHTML = '<div class="text-neutral italic text-center py-6">暂无模板，请创建新模板</div>';
+                updateTemplateCount(0);
+                return;
+            }
+
+            // 获取当前选中的分类
+            const activeCategory = document.querySelector('.category-btn-active')?.getAttribute('data-category') || 'all';
+            
+            // 过滤模板
+            const filteredTemplates = activeCategory === 'all' ? 
+                templates : 
+                templates.filter(template => template.category === activeCategory);
+            
+            if (filteredTemplates.length === 0) {
+                container.innerHTML = '<div class="text-neutral italic text-center py-6">该分类下暂无模板</div>';
+                updateTemplateCount(0);
+                return;
+            }
+
+            filteredTemplates.forEach(template => {
+                const div = document.createElement('div');
+                div.className = 'p-3 border border-gray-200 rounded-lg cursor-pointer transition-all hover:border-primary hover:shadow-md group';
+                div.setAttribute('data-id', template.id);
+                
+                div.innerHTML = `
+                    <div class="text-sm font-medium mb-1">${template.name}</div>
+                    <div class="text-xs text-neutral mb-2">${template.category}</div>
+                    <div class="text-xs text-neutral">${template.createdAt}</div>
+                    <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                        <button class="apply-template-btn text-xs text-primary hover:text-primary/80 p-1" data-id="${template.id}" title="应用模板">
+                            <i class="fa fa-check"></i>
+                        </button>
+                        <button class="edit-template-btn text-xs text-neutral hover:text-primary p-1" data-id="${template.id}" title="编辑模板">
+                            <i class="fa fa-edit"></i>
+                        </button>
+                        <button class="delete-template-btn text-xs text-red-500 hover:text-red-700 p-1" data-id="${template.id}" title="删除模板">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                
+                // 应用模板
+                div.querySelector('.apply-template-btn').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    applyTemplate(template.id);
+                });
+                
+                // 编辑模板
+                div.querySelector('.edit-template-btn').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    editTemplate(template.id);
+                });
+                
+                // 删除模板
+                div.querySelector('.delete-template-btn').addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    deleteTemplate(template.id);
+                });
+                
+                // 点击应用模板
+                div.addEventListener('click', function() {
+                    applyTemplate(template.id);
+                });
+                
+                container.appendChild(div);
+            });
+            
+            updateTemplateCount(filteredTemplates.length);
+        }
+
+        // 更新模板数量显示
+        function updateTemplateCount(count) {
+            const countElement = document.getElementById('templateCount');
+            if (countElement) {
+                countElement.textContent = count;
+            }
+        }
+
+        // 应用模板
+        function applyTemplate(templateId) {
+            const template = templates.find(t => t.id === templateId);
+            if (template && template.selection) {
+                selection = JSON.parse(JSON.stringify(template.selection));
+                renderAllContent();
+                updateResult();
+                
+                // 添加到最近使用
+                addToRecentTemplates(templateId);
+                
+                showNotification(`已应用模板：${template.name}`, 'success');
+            }
+        }
+
+        // 编辑模板
+        async function editTemplate(templateId) {
+            const template = templates.find(t => t.id === templateId);
+            if (!template) return;
+            
+            const newName = await showCustomPrompt('编辑模板名称：', template.name);
+            if (newName !== null && newName.trim()) {
+                const newCategory = await showCustomPrompt('编辑模板分类：', template.category);
+                if (newCategory !== null) {
+                    template.name = newName.trim();
+                    template.category = newCategory.trim() || '默认分类';
+                    
+                    // 更新分类列表
+                    if (!templateCategories.includes(template.category)) {
+                        templateCategories.push(template.category);
+                    }
+                    
+                    saveTemplatesAndCategories();
+                    renderTemplates();
+                    renderCategoryButtons();
+                    showNotification('模板修改成功！', 'success');
+                }
+            }
+        }
+
+        // 删除模板
+        async function deleteTemplate(templateId) {
+            const template = templates.find(t => t.id === templateId);
+            const confirmed = await showCustomConfirm(`确定要删除模板"${template.name}"吗？`);
+            if (template && confirmed) {
+                templates = templates.filter(t => t.id !== templateId);
+                
+                // 从最近使用中移除
+                recentTemplates = recentTemplates.filter(id => id !== templateId);
+                saveRecentTemplates();
+                
+                saveTemplatesAndCategories();
+                renderTemplates();
+                renderRecentTemplates();
+                showNotification('模板删除成功！', 'success');
+            }
+        }
+
+        // 渲染分类按钮
+        function renderCategoryButtons() {
+            const container = document.getElementById('categoryButtons');
+            if (!container) return;
+
+            // 保存当前选中的分类
+            const currentActive = document.querySelector('.category-btn-active')?.getAttribute('data-category') || 'all';
+            
+            container.innerHTML = '';
+            
+            // 添加"所有分类"按钮
+            const allBtn = document.createElement('button');
+            allBtn.className = 'category-btn text-left';
+            allBtn.setAttribute('data-category', 'all');
+            allBtn.textContent = '所有分类';
+            if (currentActive === 'all') {
+                allBtn.classList.add('category-btn-active');
+            }
+            container.appendChild(allBtn);
+            
+            // 添加其他分类按钮
+            templateCategories.forEach(category => {
+                if (category !== '所有分类') {
+                    const btn = document.createElement('button');
+                    btn.className = 'category-btn text-left';
+                    btn.setAttribute('data-category', category);
+                    btn.textContent = category;
+                    if (currentActive === category) {
+                        btn.classList.add('category-btn-active');
+                    }
+                    container.appendChild(btn);
+                }
+            });
+            
+            // 绑定点击事件
+            container.querySelectorAll('.category-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // 移除所有active类
+                    container.querySelectorAll('.category-btn').forEach(b => {
+                        b.classList.remove('category-btn-active');
+                    });
+                    
+                    // 添加active类到当前按钮
+                    this.classList.add('category-btn-active');
+                    
+                    // 重新渲染模板
+                    renderTemplates();
+                });
+            });
+        }
+
+        // 刷新模板和分类
+        function refreshTemplatesAndCategories() {
+            loadTemplatesAndCategories();
+            renderTemplates();
+            renderCategoryButtons();
+            showNotification('已刷新模板和分类', 'info');
+        }
+
+        // 添加到最近使用模板
+        function addToRecentTemplates(templateId) {
+            // 移除已存在的
+            recentTemplates = recentTemplates.filter(id => id !== templateId);
+            
+            // 添加到开头
+            recentTemplates.unshift(templateId);
+            
+            // 限制数量
+            if (recentTemplates.length > MAX_RECENT_TEMPLATES) {
+                recentTemplates = recentTemplates.slice(0, MAX_RECENT_TEMPLATES);
+            }
+            
+            saveRecentTemplates();
+            renderRecentTemplates();
+        }
+
+        // 保存最近使用模板
+        function saveRecentTemplates() {
+            try {
+                localStorage.setItem('recentTemplates', JSON.stringify(recentTemplates));
+            } catch (e) {
+                console.error('保存最近使用模板失败:', e);
+            }
+        }
+
+        // 加载最近使用模板
+        function loadRecentTemplates() {
+            try {
+                const saved = localStorage.getItem('recentTemplates');
+                if (saved) {
+                    recentTemplates = JSON.parse(saved);
+                    // 过滤掉不存在的模板
+                    recentTemplates = recentTemplates.filter(id => 
+                        templates.some(t => t.id === id)
+                    );
+                }
+            } catch (e) {
+                console.error('加载最近使用模板失败:', e);
+                recentTemplates = [];
+            }
+        }
+
+        // 渲染最近使用模板
+        function renderRecentTemplates() {
+            const container = document.getElementById('recentTemplatesContainer');
+            if (!container) return;
+
+            container.innerHTML = '';
+            
+            if (recentTemplates.length === 0) {
+                container.innerHTML = '<div class="text-neutral italic text-center py-2 w-full">暂无最近使用的模板</div>';
+                return;
+            }
+
+            recentTemplates.forEach(templateId => {
+                const template = templates.find(t => t.id === templateId);
+                if (template) {
+                    const div = document.createElement('div');
+                    div.className = 'p-2 border border-gray-200 rounded cursor-pointer transition-all hover:border-primary hover:bg-blue-50';
+                    
+                    div.innerHTML = `
+                        <div class="text-sm font-medium">${template.name}</div>
+                        <div class="text-xs text-neutral">${template.category}</div>
+                    `;
+                    
+                    div.addEventListener('click', function() {
+                        applyTemplate(templateId);
+                    });
+                    
+                    container.appendChild(div);
+                }
+            });
+        }
+
+        // 打开配置面板
+        function openConfigPanel() {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center';
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+                    <div class="p-6">
+                        <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                            <i class="fa fa-cog text-primary"></i>
+                            API配置设置
+                        </h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">扣子API密钥：</label>
+                                <input type="password" id="apiKey" class="w-full p-2 border rounded" placeholder="请输入您的扣子API密钥" value="">
+                                <p class="text-xs text-gray-500 mt-1">用于调用扣子智能体API的认证密钥</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">机器人ID：</label>
+                                <input type="text" id="botId" class="w-full p-2 border rounded" placeholder="请输入机器人ID" value="">
+                                <p class="text-xs text-gray-500 mt-1">您在扣子平台创建的智能体机器人ID</p>
+                            </div>
+                            <div class="mb-4">
+                                <button type="button" id="testApiBtn" class="w-full px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                                    <i class="fa fa-flask mr-1"></i>
+                                    测试API连接
+                                </button>
+                                <div id="testResult" class="mt-2 text-sm hidden"></div>
+                            </div>
+                            <div class="bg-green-50 p-3 rounded mb-3">
+                                <p class="text-sm text-green-700">
+                                    <i class="fa fa-file-code mr-1"></i>
+                                    <strong>新特性：</strong> 配置现在直接保存在HTML文件中，不再使用浏览器缓存。即使清除缓存也不会丢失配置！
+                                </p>
+                            </div>
+                            <div class="bg-blue-50 p-3 rounded">
+                                <p class="text-sm text-blue-700">
+                                    <i class="fa fa-info-circle mr-1"></i>
+                                    配置完成后，点击"生成话术"按钮将调用您的扣子智能体API来优化话术内容。
+                                </p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2 justify-end mt-6">
+                            <button type="button" id="cancelConfig" class="px-4 py-2 text-gray-600 hover:text-gray-800">取消</button>
+                            <button type="button" id="saveConfig" class="px-4 py-2 bg-primary text-white rounded hover:bg-primary/90">保存配置</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // 设置输入框的默认值
+            document.getElementById('apiKey').value = getApiKey();
+            document.getElementById('botId').value = getBotId();
+            
+            // 取消按钮
+            document.getElementById('cancelConfig').addEventListener('click', function() {
+                document.body.removeChild(modal);
+            });
+            
+            // 测试API连接按钮
+            document.getElementById('testApiBtn').addEventListener('click', async function() {
+                const apiKey = document.getElementById('apiKey').value.trim();
+                const botId = document.getElementById('botId').value.trim();
+                const testBtn = this;
+                const testResult = document.getElementById('testResult');
+                
+                if (!apiKey || !botId) {
+                    testResult.className = 'mt-2 text-sm text-red-600';
+                    testResult.textContent = '请先填写API密钥和机器人ID';
+                    testResult.classList.remove('hidden');
+                    return;
+                }
+                
+                // 显示测试中状态
+                testBtn.disabled = true;
+                testBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-1"></i>测试中...';
+                testResult.className = 'mt-2 text-sm text-blue-600';
+                testResult.textContent = '正在测试API连接...';
+                testResult.classList.remove('hidden');
+                
+                try {
+                    const response = await fetch('https://api.coze.cn/v3/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify({
+                            bot_id: botId,
+                            user_id: '123123',
+                            stream: false,
+                            auto_save_history: true,
+                            additional_messages: [
+                                {
+                                    role: 'user',
+                                    content: '测试连接',
+                                    content_type: 'text'
+                                }
+                            ]
+                        })
+                    });
+                    
+                    console.log('API测试响应状态:', response.status);
+                    console.log('API测试响应头:', response.headers);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        console.log('API测试响应数据:', data);
+                        
+                        // 检查API响应是否包含有效内容
+                        let hasValidResponse = false;
+                        let responseContent = '';
+                        
+                        if (data && data.messages && data.messages.length > 0) {
+                            const assistantMessages = data.messages.filter(msg => 
+                                msg.role === 'assistant' && 
+                                msg.content && 
+                                msg.content.trim() !== '' &&
+                                !msg.content.startsWith('{') && 
+                                !msg.content.startsWith('RPCError')
+                            );
+                            
+                            if (assistantMessages.length > 0) {
+                                hasValidResponse = true;
+                                responseContent = assistantMessages[0].content;
+                            }
+                        } else if (data && data.data && data.data.messages && data.data.messages.length > 0) {
+                            const assistantMessages = data.data.messages.filter(msg => 
+                                msg.role === 'assistant' && 
+                                msg.content && 
+                                msg.content.trim() !== '' &&
+                                !msg.content.startsWith('{') && 
+                                !msg.content.startsWith('RPCError')
+                            );
+                            
+                            if (assistantMessages.length > 0) {
+                                hasValidResponse = true;
+                                responseContent = assistantMessages[0].content;
+                            }
+                        }
+                        
+                        if (hasValidResponse) {
+                            testResult.className = 'mt-2 text-sm text-green-600';
+                            testResult.innerHTML = `<i class="fa fa-check-circle mr-1"></i>API连接测试成功！机器人回复："${responseContent.substring(0, 50)}${responseContent.length > 50 ? '...' : ''}"`;
+                        } else {
+                            testResult.className = 'mt-2 text-sm text-yellow-600';
+                            testResult.innerHTML = '<i class="fa fa-exclamation-triangle mr-1"></i>API连接成功，但未获取到有效回复内容。请检查机器人配置。';
+                        }
+                    } else {
+                        const errorText = await response.text();
+                        console.log('API测试错误响应:', errorText);
+                        
+                        let errorMsg = 'API连接失败';
+                        if (response.status === 401) {
+                            errorMsg = 'API密钥无效或已过期';
+                        } else if (response.status === 403) {
+                            errorMsg = '权限不足或机器人ID无效';
+                        } else if (response.status === 429) {
+                            errorMsg = '请求频率过高，请稍后重试';
+                        } else if (response.status >= 500) {
+                            errorMsg = '服务器内部错误';
+                        }
+                        
+                        testResult.className = 'mt-2 text-sm text-red-600';
+                        testResult.innerHTML = `<i class="fa fa-times-circle mr-1"></i>${errorMsg} (状态码: ${response.status})`;
+                    }
+                } catch (error) {
+                    console.error('API测试网络错误:', error);
+                    testResult.className = 'mt-2 text-sm text-red-600';
+                    testResult.innerHTML = '<i class="fa fa-times-circle mr-1"></i>网络连接错误或CORS问题';
+                } finally {
+                    // 恢复按钮状态
+                    testBtn.disabled = false;
+                    testBtn.innerHTML = '<i class="fa fa-flask mr-1"></i>测试API连接';
+                }
+            });
+            
+            // 保存配置按钮
+            document.getElementById('saveConfig').addEventListener('click', function() {
+                const apiKey = document.getElementById('apiKey').value.trim();
+                const botId = document.getElementById('botId').value.trim();
+                
+                if (!apiKey || !botId) {
+                    showNotification('请填写完整的API配置信息', 'error');
+                    return;
+                }
+                
+                // 保存配置到文件变量
+                API_CONFIG.apiKey = apiKey;
+                API_CONFIG.botId = botId;
+                
+                showNotification('API配置保存成功！', 'success');
+                document.body.removeChild(modal);
+            });
+            
+            // 点击模态框外部关闭
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    document.body.removeChild(modal);
+                }
+            });
+        }
+
+        // 打开模板设置
+        function openTemplateSettings() {
+            showNotification('模板设置功能开发中...', 'info');
+        }
+
+        // 获取API密钥
+        function getApiKey() {
+            return API_CONFIG.apiKey || '';
+        }
+        
+        // 获取机器人ID
+        function getBotId() {
+            return API_CONFIG.botId || '';
+        }
+        
+        // 检查API配置是否完整
+        function isApiConfigured() {
+            return getApiKey() && getBotId();
+        }
+
+        // 页面初始化完成后的额外处理
+        document.addEventListener('DOMContentLoaded', function() {
+            // 确保分类按钮正确渲染
+            setTimeout(() => {
+                renderCategoryButtons();
+            }, 100);
+        });
+    </script>
+</body>
+</html>
+    

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配置测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+        }
+        .error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+        .success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>API配置测试页面</h1>
+        <p>这个页面用于测试配置的保存和获取功能</p>
+        
+        <div class="form-group">
+            <label for="apiKey">API密钥：</label>
+            <input type="password" id="apiKey" placeholder="请输入API密钥">
+        </div>
+        
+        <div class="form-group">
+            <label for="botId">机器人ID：</label>
+            <input type="text" id="botId" placeholder="请输入机器人ID">
+        </div>
+        
+        <button onclick="saveConfig()">保存配置</button>
+        <button onclick="loadConfig()">加载配置</button>
+        <button onclick="clearConfig()">清除配置</button>
+        <button onclick="testConfig()">测试配置</button>
+        
+        <div id="result" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        // 保存配置
+        function saveConfig() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const botId = document.getElementById('botId').value.trim();
+            
+            if (!apiKey || !botId) {
+                showResult('请填写完整的配置信息', 'error');
+                return;
+            }
+            
+            try {
+                localStorage.setItem('coze_api_key', apiKey);
+                localStorage.setItem('coze_bot_id', botId);
+                showResult('配置保存成功！', 'success');
+            } catch (error) {
+                showResult('保存失败：' + error.message, 'error');
+            }
+        }
+        
+        // 加载配置
+        function loadConfig() {
+            try {
+                const apiKey = localStorage.getItem('coze_api_key') || '';
+                const botId = localStorage.getItem('coze_bot_id') || '';
+                
+                document.getElementById('apiKey').value = apiKey;
+                document.getElementById('botId').value = botId;
+                
+                showResult(`配置加载成功！\nAPI密钥：${apiKey ? '已设置(' + apiKey.substring(0, 10) + '...)' : '未设置'}\n机器人ID：${botId || '未设置'}`, 'success');
+            } catch (error) {
+                showResult('加载失败：' + error.message, 'error');
+            }
+        }
+        
+        // 清除配置
+        function clearConfig() {
+            try {
+                localStorage.removeItem('coze_api_key');
+                localStorage.removeItem('coze_bot_id');
+                document.getElementById('apiKey').value = '';
+                document.getElementById('botId').value = '';
+                showResult('配置已清除', 'success');
+            } catch (error) {
+                showResult('清除失败：' + error.message, 'error');
+            }
+        }
+        
+        // 测试配置
+        function testConfig() {
+            const apiKey = getApiKey();
+            const botId = getBotId();
+            
+            const result = `当前配置状态：\n` +
+                          `API密钥：${apiKey ? '已设置(' + apiKey.substring(0, 10) + '...)' : '未设置'}\n` +
+                          `机器人ID：${botId || '未设置'}\n` +
+                          `配置完整性：${isApiConfigured() ? '✓ 完整' : '✗ 不完整'}`;
+            
+            showResult(result, isApiConfigured() ? 'success' : 'error');
+        }
+        
+        // 获取API密钥
+        function getApiKey() {
+            return localStorage.getItem('coze_api_key') || '';
+        }
+        
+        // 获取机器人ID
+        function getBotId() {
+            return localStorage.getItem('coze_bot_id') || '';
+        }
+        
+        // 检查API配置是否完整
+        function isApiConfigured() {
+            return getApiKey() && getBotId();
+        }
+        
+        // 显示结果
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = 'result ' + type;
+            resultDiv.style.display = 'block';
+        }
+        
+        // 页面加载时自动加载配置
+        window.onload = function() {
+            loadConfig();
+        };
+    </script>
+</body>
+</html>
