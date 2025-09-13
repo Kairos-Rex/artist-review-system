@@ -233,6 +233,9 @@
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-semibold">选择面板</h2>
                     <div class="flex gap-2">
+                        <button id="settingsBtn" class="flex items-center gap-1 text-neutral hover:text-blue-500 transition-colors btn-text-nowrap">
+                            <i class="fa fa-cog"></i> 修改设置
+                        </button>
                         <button id="resetBtnPanel" class="flex items-center gap-1 text-neutral hover:text-red-500 transition-colors btn-text-nowrap">
                             <i class="fa fa-refresh"></i> 重置选择
                         </button>
@@ -242,8 +245,8 @@
                 <!-- 起手称呼式 -->
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-3">
-                        <h3 class="font-medium text-lg flex items-center gap-2">
-                            <i class="fa fa-comment-o text-primary"></i>起手称呼式
+                        <h3 class="font-bold text-lg flex items-center gap-2">
+                            <i class="fa fa-comment-o text-primary"></i><span id="greetingTitle">起手称呼式</span>
                         </h3>
                         <button class="add-item-btn text-sm text-primary hover:text-primary/80 btn-text-nowrap" data-type="greeting">
                             <i class="fa fa-plus-circle"></i>
@@ -257,8 +260,8 @@
                 <!-- 优点 -->
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-3">
-                        <h3 class="font-medium text-lg flex items-center gap-2">
-                            <i class="fa fa-thumbs-up text-green-500"></i>优点
+                        <h3 class="font-bold text-lg flex items-center gap-2">
+                            <i class="fa fa-thumbs-up text-green-500"></i><span id="strengthTitle">优点</span>
                         </h3>
                         <button class="add-item-btn text-sm text-primary hover:text-primary/80 btn-text-nowrap" data-type="strength">
                             <i class="fa fa-plus-circle"></i>
@@ -272,8 +275,8 @@
                 <!-- 问题 -->
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-3">
-                        <h3 class="font-medium text-lg flex items-center gap-2">
-                            <i class="fa fa-exclamation-triangle text-amber-500"></i>问题
+                        <h3 class="font-bold text-lg flex items-center gap-2">
+                            <i class="fa fa-exclamation-triangle text-amber-500"></i><span id="issueTitle">问题</span>
                         </h3>
                         <button class="add-item-btn text-sm text-primary hover:text-primary/80 btn-text-nowrap" data-type="issue">
                             <i class="fa fa-plus-circle"></i>
@@ -287,8 +290,8 @@
                 <!-- 结尾式 -->
                 <div class="mb-6">
                     <div class="flex justify-between items-center mb-3">
-                        <h3 class="font-medium text-lg flex items-center gap-2">
-                            <i class="fa fa-sign-out text-purple-500"></i>结尾式
+                        <h3 class="font-bold text-lg flex items-center gap-2">
+                            <i class="fa fa-sign-out text-purple-500"></i><span id="closingTitle">结尾式</span>
                         </h3>
                         <button class="add-item-btn text-sm text-primary hover:text-primary/80 btn-text-nowrap" data-type="closing">
                             <i class="fa fa-plus-circle"></i>
@@ -419,10 +422,10 @@
         let configManager;
         let appData = {};
         let selection = {
-                    greeting: { id: null, subOptions: [] },
+                    greeting: [], // 格式: [{ id: itemId, subOptions: [subOptionIndex1, subOptionIndex2] }]
                     strength: [], // 格式: [{ id: itemId, subOptions: [subOptionIndex1, subOptionIndex2] }]
                     issue: [], // 格式: [{ id: itemId, subOptions: [subOptionIndex1, subOptionIndex2] }]
-                    closing: { id: null, subOptions: [] }
+                    closing: [] // 格式: [{ id: itemId, subOptions: [subOptionIndex1, subOptionIndex2] }]
                 };
         let contentIndex = {
                     greeting: {},
@@ -560,6 +563,9 @@
             
             // 渲染历史记录
             renderHistoryRecords();
+            
+            // 更新类别标题显示
+            updateCategoryTitles();
         };
 
         // 初始化应用数据
@@ -723,7 +729,7 @@
             }
             
             div.innerHTML = `
-                <div class="text-sm font-medium mb-1">${item.text}</div>
+                <div class="text-base font-medium mb-1">${item.text}</div>
                 ${selectedSubOptionsText}
                 <div class="absolute top-1/2 right-1 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button class="edit-btn text-xs text-neutral hover:text-primary p-1" data-id="${item.id}" data-type="${type}">
@@ -848,7 +854,7 @@
             const bubbleRect = bubble.getBoundingClientRect();
             
             let left = rect.left + rect.width / 2 - bubbleRect.width / 2;
-            let top = rect.bottom - 10;
+            let top = rect.bottom + 0;
             
             // 确保气泡框不超出视窗
             if (left < 8) left = 8;
@@ -902,7 +908,7 @@
                     if (document.body.contains(bubble)) {
                         bubble.remove();
                     }
-                }, 300); // 300ms延迟关闭
+                }, 100); // 100ms延迟关闭
             };
             
             const targetMouseLeave = function() {
@@ -910,7 +916,7 @@
                     if (document.body.contains(bubble)) {
                         bubble.remove();
                     }
-                }, 300);
+                }, 100);
             };
             
             const targetMouseEnter = function() {
@@ -960,18 +966,14 @@
 
         // 应用二级选项选择
         function applySubOptionSelection(itemId, type, selectedIndexes) {
-            if (type === 'greeting' || type === 'closing') {
-                selection[type] = { id: itemId, subOptions: selectedIndexes };
-            } else {
-                // 移除旧的选择
-                const existingIndex = selection[type].findIndex(item => item.id === itemId);
-                if (existingIndex > -1) {
-                    selection[type].splice(existingIndex, 1);
-                }
-                // 添加新的选择
-                if (selectedIndexes.length > 0) {
-                    selection[type].push({ id: itemId, subOptions: selectedIndexes });
-                }
+            // 移除旧的选择
+            const existingIndex = selection[type].findIndex(item => item.id === itemId);
+            if (existingIndex > -1) {
+                selection[type].splice(existingIndex, 1);
+            }
+            // 添加新的选择
+            if (selectedIndexes.length > 0) {
+                selection[type].push({ id: itemId, subOptions: selectedIndexes });
             }
             
             // 重新渲染该类型的内容
@@ -985,19 +987,11 @@
         function clearItemSelection(id, type) {
             let wasSelected = false;
             
-            if (type === 'greeting' || type === 'closing') {
-                // 单选类型
-                if (selection[type].id === id) {
-                    selection[type] = { id: null, subOptions: [] };
-                    wasSelected = true;
-                }
-            } else {
-                // 多选类型
-                const index = selection[type].findIndex(item => item.id === id);
-                if (index > -1) {
-                    selection[type].splice(index, 1);
-                    wasSelected = true;
-                }
+            // 多选类型
+            const index = selection[type].findIndex(item => item.id === id);
+            if (index > -1) {
+                selection[type].splice(index, 1);
+                wasSelected = true;
             }
             
             if (wasSelected) {
@@ -1014,51 +1008,32 @@
 
         // 获取选中的二级选项
         function getSelectedSubOptions(itemId, type) {
-            if (type === 'greeting' || type === 'closing') {
-                return selection[type].id === itemId ? selection[type].subOptions : [];
-            } else {
-                const item = selection[type].find(item => item.id === itemId);
-                return item ? item.subOptions : [];
-            }
+            const item = selection[type].find(item => item.id === itemId);
+            return item ? item.subOptions : [];
         }
         
         // 切换二级选项选择状态
         function toggleSubOptionSelection(itemId, subIndex, type, checked) {
-            if (type === 'greeting' || type === 'closing') {
-                if (selection[type].id === itemId) {
-                    if (checked) {
-                        if (!selection[type].subOptions.includes(subIndex)) {
-                            selection[type].subOptions.push(subIndex);
-                        }
-                    } else {
-                        const index = selection[type].subOptions.indexOf(subIndex);
-                        if (index > -1) {
-                            selection[type].subOptions.splice(index, 1);
-                        }
-                    }
+            let item = selection[type].find(item => item.id === itemId);
+            if (!item) {
+                item = { id: itemId, subOptions: [] };
+                selection[type].push(item);
+            }
+            
+            if (checked) {
+                if (!item.subOptions.includes(subIndex)) {
+                    item.subOptions.push(subIndex);
                 }
             } else {
-                let item = selection[type].find(item => item.id === itemId);
-                if (!item) {
-                    item = { id: itemId, subOptions: [] };
-                    selection[type].push(item);
+                const index = item.subOptions.indexOf(subIndex);
+                if (index > -1) {
+                    item.subOptions.splice(index, 1);
                 }
-                
-                if (checked) {
-                    if (!item.subOptions.includes(subIndex)) {
-                        item.subOptions.push(subIndex);
-                    }
-                } else {
-                    const index = item.subOptions.indexOf(subIndex);
-                    if (index > -1) {
-                        item.subOptions.splice(index, 1);
-                    }
-                    // 如果没有选中的二级选项，移除整个项目
-                    if (item.subOptions.length === 0) {
-                        const itemIndex = selection[type].indexOf(item);
-                        if (itemIndex > -1) {
-                            selection[type].splice(itemIndex, 1);
-                        }
+                // 如果没有选中的二级选项，移除整个项目
+                if (item.subOptions.length === 0) {
+                    const itemIndex = selection[type].indexOf(item);
+                    if (itemIndex > -1) {
+                        selection[type].splice(itemIndex, 1);
                     }
                 }
             }
@@ -1068,30 +1043,17 @@
 
         // 检查项目是否被选中
         function isItemSelected(id, type) {
-            if (type === 'greeting' || type === 'closing') {
-                return selection[type].id === id;
-            } else {
-                return selection[type].some(item => item.id === id);
-            }
+            return selection[type].some(item => item.id === id);
         }
 
         // 切换选择状态
         function toggleSelection(id, type) {
-            if (type === 'greeting' || type === 'closing') {
-                // 单选
-                if (selection[type].id === id) {
-                    selection[type] = { id: null, subOptions: [] };
-                } else {
-                    selection[type] = { id: id, subOptions: [] };
-                }
+            // 多选
+            const index = selection[type].findIndex(item => item.id === id);
+            if (index > -1) {
+                selection[type].splice(index, 1);
             } else {
-                // 多选
-                const index = selection[type].findIndex(item => item.id === id);
-                if (index > -1) {
-                    selection[type].splice(index, 1);
-                } else {
-                    selection[type].push({ id: id, subOptions: [] });
-                }
+                selection[type].push({ id: id, subOptions: [] });
             }
             
             // 重新渲染该类型的内容
@@ -1107,74 +1069,94 @@
             let resultParts = [];
 
             // 处理起手称呼式
-            if (selection.greeting.id && contentIndex.greeting[selection.greeting.id]) {
-                const item = contentIndex.greeting[selection.greeting.id];
-                if (selection.greeting.subOptions.length > 0) {
-                    const subContents = selection.greeting.subOptions.map(index => item.subOptions[index]).filter(Boolean);
-                    if (subContents.length > 0) {
-                        resultParts.push(`起手称呼式：${subContents.join('，')}`);
+            if (selection.greeting.length > 0) {
+                const greetingContents = [];
+                const categoryName = getCategoryDisplayName('greeting');
+                selection.greeting.forEach(selItem => {
+                    const item = contentIndex.greeting[selItem.id];
+                    if (item) {
+                        if (selItem.subOptions.length > 0) {
+                            const subContents = selItem.subOptions.map(index => item.subOptions[index]).filter(Boolean);
+                            if (subContents.length > 0) {
+                                greetingContents.push(...subContents);
+                            }
+                        } else {
+                            // 没有二级选项时，直接使用一级选项内容作为二级选项内容
+                            greetingContents.push(item.text);
+                        }
                     }
-                } else {
-                    // 没有二级选项时，直接使用一级选项内容作为二级选项内容
-                    resultParts.push(`起手称呼式：${item.text}`);
+                });
+                if (greetingContents.length > 0) {
+                    resultParts.push(`${categoryName}：${greetingContents.join('，')}`);
                 }
             }
 
             // 处理优点
             if (selection.strength.length > 0) {
-                const strengthParts = [];
+                const strengthContents = [];
+                const categoryName = getCategoryDisplayName('strength');
                 selection.strength.forEach(selItem => {
                     const item = contentIndex.strength[selItem.id];
                     if (item) {
                         if (selItem.subOptions.length > 0) {
                             const subContents = selItem.subOptions.map(index => item.subOptions[index]).filter(Boolean);
                             if (subContents.length > 0) {
-                                strengthParts.push(`优点：${subContents.join('，')}`);
+                                strengthContents.push(...subContents);
                             }
                         } else {
                             // 没有二级选项时，直接使用一级选项内容作为二级选项内容
-                            strengthParts.push(`优点：${item.text}`);
+                            strengthContents.push(item.text);
                         }
                     }
                 });
-                if (strengthParts.length > 0) {
-                    resultParts.push(...strengthParts);
+                if (strengthContents.length > 0) {
+                    resultParts.push(`${categoryName}：${strengthContents.join('，')}`);
                 }
             }
 
             // 处理问题
             if (selection.issue.length > 0) {
-                const issueParts = [];
+                const issueContents = [];
+                const categoryName = getCategoryDisplayName('issue');
                 selection.issue.forEach(selItem => {
                     const item = contentIndex.issue[selItem.id];
                     if (item) {
                         if (selItem.subOptions.length > 0) {
                             const subContents = selItem.subOptions.map(index => item.subOptions[index]).filter(Boolean);
                             if (subContents.length > 0) {
-                                issueParts.push(`问题：${subContents.join('，')}`);
+                                issueContents.push(...subContents);
                             }
                         } else {
                             // 没有二级选项时，直接使用一级选项内容作为二级选项内容
-                            issueParts.push(`问题：${item.text}`);
+                            issueContents.push(item.text);
                         }
                     }
                 });
-                if (issueParts.length > 0) {
-                    resultParts.push(...issueParts);
+                if (issueContents.length > 0) {
+                    resultParts.push(`${categoryName}：${issueContents.join('，')}`);
                 }
             }
 
             // 处理结尾式
-            if (selection.closing.id && contentIndex.closing[selection.closing.id]) {
-                const item = contentIndex.closing[selection.closing.id];
-                if (selection.closing.subOptions.length > 0) {
-                    const subContents = selection.closing.subOptions.map(index => item.subOptions[index]).filter(Boolean);
-                    if (subContents.length > 0) {
-                        resultParts.push(`结尾式：${subContents.join('，')}`);
+            if (selection.closing.length > 0) {
+                const closingContents = [];
+                const categoryName = getCategoryDisplayName('closing');
+                selection.closing.forEach(selItem => {
+                    const item = contentIndex.closing[selItem.id];
+                    if (item) {
+                        if (selItem.subOptions.length > 0) {
+                            const subContents = selItem.subOptions.map(index => item.subOptions[index]).filter(Boolean);
+                            if (subContents.length > 0) {
+                                closingContents.push(...subContents);
+                            }
+                        } else {
+                            // 没有二级选项时，直接使用一级选项内容作为二级选项内容
+                            closingContents.push(item.text);
+                        }
                     }
-                } else {
-                    // 没有二级选项时，直接使用一级选项内容作为二级选项内容
-                    resultParts.push(`结尾式：${item.text}`);
+                });
+                if (closingContents.length > 0) {
+                    resultParts.push(`${categoryName}：${closingContents.join('，')}`);
                 }
             }
 
@@ -2084,15 +2066,9 @@
                 appData[type].splice(index, 1);
                 
                 // 如果删除的项目被选中，则取消选择
-                if (type === 'greeting' || type === 'closing') {
-                    if (selection[type] === id) {
-                        selection[type] = null;
-                    }
-                } else {
-                    const selectionIndex = selection[type].indexOf(id);
-                    if (selectionIndex > -1) {
-                        selection[type].splice(selectionIndex, 1);
-                    }
+                const selectionIndex = selection[type].findIndex(item => item.id === id);
+                if (selectionIndex > -1) {
+                    selection[type].splice(selectionIndex, 1);
                 }
                 
                 saveAppData();
@@ -2127,10 +2103,10 @@
         // 保存当前模板
         async function saveCurrentTemplate() {
             // 检查是否有选择内容
-            const hasSelection = selection.greeting.id || 
+            const hasSelection = selection.greeting.length > 0 || 
                                 selection.strength.length > 0 || 
                                 selection.issue.length > 0 || 
-                                selection.closing.id;
+                                selection.closing.length > 0;
             
             if (!hasSelection) {
                 showNotification('请先选择一些内容再保存模板', 'warning');
@@ -2703,7 +2679,388 @@
                 renderCategoryButtons();
             }, 100);
         });
+        
+        // 设置弹窗相关功能
+        document.getElementById('settingsBtn').addEventListener('click', function() {
+            document.getElementById('settingsModal').style.display = 'flex';
+        });
+        
+        // 关闭设置弹窗
+        function closeSettingsModal() {
+            document.getElementById('settingsModal').style.display = 'none';
+        }
+        
+        // 修改类别名称
+        function editCategoryName(categoryKey) {
+            const currentName = getCategoryDisplayName(categoryKey);
+            showInputDialog('修改类别名称', '请输入新的类别名称:', currentName, function(newName) {
+                if (newName && newName.trim() && newName !== currentName) {
+                    showConfirmDialog(`确定要将"${currentName}"修改为"${newName}"吗？`, function() {
+                        // 更新类别显示名称
+                        updateCategoryDisplayName(categoryKey, newName.trim());
+                        // 重新渲染界面
+                        renderAllContent();
+                        showNotification('类别名称修改成功！', 'success');
+                    });
+                }
+            });
+        }
+        
+        // 修改类别说明
+        function editCategoryDescription(categoryKey) {
+            const currentDescription = getCategoryDescription(categoryKey);
+            showInputDialog('修改类别说明', '请输入类别说明（可选）:', currentDescription, function(newDescription) {
+                // 更新类别说明
+                updateCategoryDescription(categoryKey, newDescription ? newDescription.trim() : '');
+                // 重新渲染界面
+                renderAllContent();
+                showNotification('类别说明修改成功！', 'success');
+            });
+        }
+        
+        // 新增类别
+        function addNewCategory() {
+            showInputDialog('新增类别', '请输入新类别的名称:', '', function(categoryName) {
+                if (categoryName && categoryName.trim()) {
+                    const categoryKey = 'custom_' + Date.now();
+                    showConfirmDialog(`确定要添加新类别"${categoryName}"吗？`, function() {
+                        // 添加新类别到数据结构
+                        addCategory(categoryKey, categoryName.trim());
+                        // 重新渲染界面
+                        renderAllContent();
+                        showNotification('新类别添加成功！', 'success');
+                    });
+                }
+            });
+        }
+        
+        // 删除类别
+        function deleteCategory(categoryKey) {
+            const categoryName = getCategoryDisplayName(categoryKey);
+            const itemCount = getItemCountInCategory(categoryKey);
+            const message = itemCount > 0 
+                ? `确定要删除类别"${categoryName}"吗？\n这将同时删除该类别下的 ${itemCount} 个选项。`
+                : `确定要删除类别"${categoryName}"吗？`;
+            
+            showConfirmDialog(message, function() {
+                // 删除类别及其下的所有选项
+                removeCategoryAndItems(categoryKey);
+                // 重新渲染界面
+                renderAllContent();
+                showNotification('类别删除成功！', 'success');
+            });
+        }
+        
+        // 显示输入对话框
+        function showInputDialog(title, message, defaultValue, callback) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg shadow-xl max-w-sm w-full mx-4">
+                    <div class="p-6">
+                        <h3 class="text-lg font-semibold mb-4">${title}</h3>
+                        <p class="text-gray-600 mb-4">${message}</p>
+                        <input type="text" id="inputDialogValue" class="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" value="${defaultValue}" placeholder="请输入...">
+                        <div class="flex gap-2 mt-6">
+                            <button onclick="closeInputDialog(false)" class="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">取消</button>
+                            <button onclick="closeInputDialog(true)" class="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">确定</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            const input = document.getElementById('inputDialogValue');
+            input.focus();
+            input.select();
+            
+            // 回车确认
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    closeInputDialog(true);
+                }
+            });
+            
+            window.closeInputDialog = function(confirmed) {
+                const value = input.value.trim();
+                document.body.removeChild(modal);
+                if (confirmed && callback) {
+                    callback(value);
+                }
+                delete window.closeInputDialog;
+            };
+        }
+        
+        // 显示确认对话框
+        function showConfirmDialog(message, callback) {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white rounded-lg shadow-xl max-w-sm w-full mx-4">
+                    <div class="p-6">
+                        <h3 class="text-lg font-semibold mb-4">确认操作</h3>
+                        <p class="text-gray-600 mb-6">${message}</p>
+                        <div class="flex gap-2">
+                            <button onclick="closeConfirmDialog(false)" class="flex-1 px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">取消</button>
+                            <button onclick="closeConfirmDialog(true)" class="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">确定</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            window.closeConfirmDialog = function(confirmed) {
+                document.body.removeChild(modal);
+                if (confirmed && callback) {
+                    callback();
+                }
+                delete window.closeConfirmDialog;
+            };
+        }
+        
+        // 获取类别显示名称
+        function getCategoryDisplayName(categoryKey) {
+            // 先从本地存储获取自定义名称
+            const customNames = getCustomCategoryNames();
+            if (customNames[categoryKey]) {
+                return customNames[categoryKey];
+            }
+            
+            // 如果没有自定义名称，使用默认名称
+            const categoryNames = {
+                'greeting': '起手称呼式',
+                'strength': '优点',
+                'issue': '问题',
+                'closing': '结尾式'
+            };
+            return categoryNames[categoryKey] || categoryKey;
+        }
+        
+        // 获取自定义类别名称
+        function getCustomCategoryNames() {
+            try {
+                const saved = localStorage.getItem('customCategoryNames');
+                return saved ? JSON.parse(saved) : {};
+            } catch (e) {
+                console.error('读取自定义类别名称失败:', e);
+                return {};
+            }
+        }
+        
+        // 保存自定义类别名称
+        function saveCustomCategoryNames(customNames) {
+            try {
+                localStorage.setItem('customCategoryNames', JSON.stringify(customNames));
+            } catch (e) {
+                console.error('保存自定义类别名称失败:', e);
+            }
+        }
+        
+        // 获取类别说明
+        function getCategoryDescription(categoryKey) {
+            try {
+                const saved = localStorage.getItem('categoryDescriptions');
+                const descriptions = saved ? JSON.parse(saved) : {};
+                return descriptions[categoryKey] || '';
+            } catch (e) {
+                console.error('读取类别说明失败:', e);
+                return '';
+            }
+        }
+        
+        // 保存类别说明
+        function saveCategoryDescriptions(descriptions) {
+            try {
+                localStorage.setItem('categoryDescriptions', JSON.stringify(descriptions));
+            } catch (e) {
+                console.error('保存类别说明失败:', e);
+            }
+        }
+        
+        // 更新类别说明
+        function updateCategoryDescription(categoryKey, description) {
+            try {
+                const saved = localStorage.getItem('categoryDescriptions');
+                const descriptions = saved ? JSON.parse(saved) : {};
+                if (description && description.trim()) {
+                    descriptions[categoryKey] = description.trim();
+                } else {
+                    delete descriptions[categoryKey];
+                }
+                saveCategoryDescriptions(descriptions);
+                // 更新界面显示
+                updateCategoryTitles();
+            } catch (e) {
+                console.error('更新类别说明失败:', e);
+            }
+        }
+        
+        // 更新类别显示名称
+        function updateCategoryDisplayName(categoryKey, newName) {
+            const customNames = getCustomCategoryNames();
+            customNames[categoryKey] = newName;
+            saveCustomCategoryNames(customNames);
+            // 更新界面显示
+            updateCategoryTitles();
+        }
+        
+        // 更新所有类别标题显示
+        function updateCategoryTitles() {
+            const categories = ['greeting', 'strength', 'issue', 'closing'];
+            categories.forEach(categoryKey => {
+                const displayName = getCategoryDisplayName(categoryKey);
+                const description = getCategoryDescription(categoryKey);
+                
+                // 更新主页面标题
+                const titleElement = document.getElementById(categoryKey + 'Title');
+                if (titleElement) {
+                    if (description) {
+                        titleElement.innerHTML = `${displayName} <span class="text-xs text-gray-500 font-normal">(${description})</span>`;
+                    } else {
+                        titleElement.textContent = displayName;
+                    }
+                }
+                
+                // 更新设置弹窗中的编辑按钮文本
+                const editElement = document.getElementById('edit' + categoryKey.charAt(0).toUpperCase() + categoryKey.slice(1) + 'Name');
+                if (editElement) {
+                    editElement.textContent = displayName;
+                }
+                
+                // 更新设置弹窗中的删除按钮文本
+                const deleteElement = document.getElementById('delete' + categoryKey.charAt(0).toUpperCase() + categoryKey.slice(1) + 'Name');
+                if (deleteElement) {
+                    deleteElement.textContent = displayName;
+                }
+            });
+        }
+        
+        // 添加新类别
+        function addCategory(categoryKey, categoryName) {
+            // 这里可以添加保存到本地存储的逻辑
+            console.log(`添加新类别 ${categoryKey}: ${categoryName}`);
+        }
+        
+        // 获取类别下的选项数量
+        function getItemCountInCategory(categoryKey) {
+            const container = document.getElementById(categoryKey + 'Container');
+            return container ? container.children.length : 0;
+        }
+        
+        // 删除类别及其选项
+        function removeCategoryAndItems(categoryKey) {
+            // 这里可以添加从本地存储删除的逻辑
+            console.log(`删除类别及其选项: ${categoryKey}`);
+        }
     </script>
+    
+    <!-- 设置弹窗 -->
+    <div id="settingsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" style="display: none;">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold">修改设置</h3>
+                    <button onclick="closeSettingsModal()" class="text-gray-400 hover:text-gray-600 text-xl">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <!-- 修改现有类别 -->
+                    <div>
+                        <h4 class="font-medium mb-2 text-gray-700">修改现有类别</h4>
+                        <div class="space-y-2">
+                            <div class="border rounded-lg p-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span id="editGreetingName">起手称呼式</span>
+                                    <div class="flex flex-col gap-1 items-center">
+                                        <button onclick="editCategoryName('greeting')" class="text-blue-500 hover:text-blue-700">
+                                            <i class="fa fa-edit"></i>
+                                        </button>
+                                        <button onclick="deleteCategory('greeting')" class="text-red-600 hover:text-red-700">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <button onclick="editCategoryDescription('greeting')" class="w-full text-left text-sm text-gray-600 hover:text-blue-600 flex items-center gap-1">
+                                    <i class="fa fa-comment-o"></i>
+                                    <span>编辑说明</span>
+                                </button>
+                            </div>
+                            <div class="border rounded-lg p-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span id="editStrengthName">优点</span>
+                                    <div class="flex flex-col gap-1 items-center">
+                                        <button onclick="editCategoryName('strength')" class="text-blue-500 hover:text-blue-700">
+                                            <i class="fa fa-edit"></i>
+                                        </button>
+                                        <button onclick="deleteCategory('strength')" class="text-red-600 hover:text-red-700">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <button onclick="editCategoryDescription('strength')" class="w-full text-left text-sm text-gray-600 hover:text-blue-600 flex items-center gap-1">
+                                    <i class="fa fa-comment-o"></i>
+                                    <span>编辑说明</span>
+                                </button>
+                            </div>
+                            <div class="border rounded-lg p-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span id="editIssueName">问题</span>
+                                    <div class="flex flex-col gap-1 items-center">
+                                        <button onclick="editCategoryName('issue')" class="text-blue-500 hover:text-blue-700">
+                                            <i class="fa fa-edit"></i>
+                                        </button>
+                                        <button onclick="deleteCategory('issue')" class="text-red-600 hover:text-red-700">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <button onclick="editCategoryDescription('issue')" class="w-full text-left text-sm text-gray-600 hover:text-blue-600 flex items-center gap-1">
+                                    <i class="fa fa-comment-o"></i>
+                                    <span>编辑说明</span>
+                                </button>
+                            </div>
+                            <div class="border rounded-lg p-3">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span id="editClosingName">结尾式</span>
+                                    <div class="flex flex-col gap-1 items-center">
+                                        <button onclick="editCategoryName('closing')" class="text-blue-500 hover:text-blue-700">
+                                            <i class="fa fa-edit"></i>
+                                        </button>
+                                        <button onclick="deleteCategory('closing')" class="text-red-600 hover:text-red-700">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <button onclick="editCategoryDescription('closing')" class="w-full text-left text-sm text-gray-600 hover:text-blue-600 flex items-center gap-1">
+                                    <i class="fa fa-comment-o"></i>
+                                    <span>编辑说明</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 新增类别 -->
+                    <div>
+                        <h4 class="font-medium mb-2 text-gray-700">新增类别</h4>
+                        <button onclick="addNewCategory()" class="w-full p-3 border-2 border-dashed border-blue-300 rounded-lg hover:border-blue-500 hover:bg-blue-50 text-blue-600 flex items-center justify-center gap-2">
+                            <i class="fa fa-plus"></i>
+                            <span>添加新类别</span>
+                        </button>
+                    </div>
+                    
+
+                </div>
+                
+                <div class="mt-6 flex justify-end">
+                    <button onclick="closeSettingsModal()" class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
     
