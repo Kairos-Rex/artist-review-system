@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>配置内置指南 - 画师评价系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            overflow-x: auto;
+        }
+        .highlight {
+            background: #fff3cd;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .step-number {
+            background: #007bff;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen py-8">
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-6 flex items-center gap-3">
+            <i class="fa fa-cog text-blue-500"></i>
+            配置内置指南
+        </h1>
+        
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-8">
+            <h2 class="text-lg font-semibold text-green-800 mb-2">
+                <i class="fa fa-check-circle"></i>
+                配置已成功内置！
+            </h2>
+            <p class="text-green-700">
+                您的API配置现在已经内置在程序中，不再依赖浏览器的localStorage存储。
+                这意味着配置会永久保存在文件中，即使清除浏览器缓存也不会丢失。
+            </p>
+        </div>
+
+        <div class="space-y-8">
+            <!-- 配置方式说明 -->
+            <section>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fa fa-info-circle text-blue-500"></i>
+                    配置方式说明
+                </h2>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-blue-800 mb-3">
+                            <span class="step-number">1</span>
+                            <span class="ml-2">界面配置（推荐）</span>
+                        </h3>
+                        <p class="text-blue-700 mb-3">通过网页界面进行配置，简单易用：</p>
+                        <ul class="text-blue-700 text-sm space-y-1">
+                            <li>• 点击页面右上角的设置按钮</li>
+                            <li>• 在API配置选项卡中填写信息</li>
+                            <li>• 点击保存配置按钮</li>
+                            <li>• 配置会自动保存到文件中</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-yellow-800 mb-3">
+                            <span class="step-number">2</span>
+                            <span class="ml-2">直接编辑文件</span>
+                        </h3>
+                        <p class="text-yellow-700 mb-3">直接修改HTML文件中的配置变量：</p>
+                        <ul class="text-yellow-700 text-sm space-y-1">
+                            <li>• 打开 index.html 文件</li>
+                            <li>• 找到 API_CONFIG 变量</li>
+                            <li>• 修改 apiKey 和 botId 的值</li>
+                            <li>• 保存文件即可生效</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 文件编辑详细步骤 -->
+            <section>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fa fa-edit text-green-500"></i>
+                    文件编辑详细步骤
+                </h2>
+                
+                <div class="space-y-6">
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3">
+                            <span class="step-number">1</span>
+                            <span class="ml-2">找到配置变量</span>
+                        </h3>
+                        <p class="text-gray-700 mb-3">在 index.html 文件中找到以下代码段（大约在第490行附近）：</p>
+                        <div class="code-block">
+// API配置变量 - 直接保存在文件中<br>
+let API_CONFIG = {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;apiKey: '', // <span class="highlight">在这里填写您的扣子API密钥</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;botId: ''&nbsp;&nbsp; // <span class="highlight">在这里填写您的机器人ID</span><br>
+};
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3">
+                            <span class="step-number">2</span>
+                            <span class="ml-2">填写配置信息</span>
+                        </h3>
+                        <p class="text-gray-700 mb-3">将您的API密钥和机器人ID填入对应位置：</p>
+                        <div class="code-block">
+let API_CONFIG = {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;apiKey: '<span class="highlight">pat_SnrkhHeuv5zIVqz7DLC2sGhfO0z5SxJdAmHuIPoGudo0FbEwwAI6lQnlr9M5bSFX</span>',<br>
+&nbsp;&nbsp;&nbsp;&nbsp;botId: '<span class="highlight">7548722284312772647</span>'<br>
+};
+                        </div>
+                        <div class="bg-yellow-100 border border-yellow-300 rounded p-3 mt-3">
+                            <p class="text-yellow-800 text-sm">
+                                <i class="fa fa-exclamation-triangle mr-1"></i>
+                                <strong>注意：</strong>请确保API密钥和机器人ID用引号包围，并且格式正确。
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-3">
+                            <span class="step-number">3</span>
+                            <span class="ml-2">保存并测试</span>
+                        </h3>
+                        <p class="text-gray-700 mb-3">完成配置后：</p>
+                        <ul class="text-gray-700 space-y-2">
+                            <li>• 保存 index.html 文件</li>
+                            <li>• 刷新浏览器页面</li>
+                            <li>• 在设置面板中测试API连接</li>
+                            <li>• 确认配置生效</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 配置优势 -->
+            <section>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fa fa-star text-yellow-500"></i>
+                    内置配置的优势
+                </h2>
+                
+                <div class="grid md:grid-cols-3 gap-4">
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                        <i class="fa fa-shield-alt text-green-500 text-2xl mb-2"></i>
+                        <h3 class="font-semibold text-green-800 mb-2">永久保存</h3>
+                        <p class="text-green-700 text-sm">配置保存在文件中，不会因清除浏览器缓存而丢失</p>
+                    </div>
+                    
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                        <i class="fa fa-rocket text-blue-500 text-2xl mb-2"></i>
+                        <h3 class="font-semibold text-blue-800 mb-2">即开即用</h3>
+                        <p class="text-blue-700 text-sm">打开页面即可使用，无需重新配置API信息</p>
+                    </div>
+                    
+                    <div class="bg-purple-50 border border-purple-200 rounded-lg p-4 text-center">
+                        <i class="fa fa-sync text-purple-500 text-2xl mb-2"></i>
+                        <h3 class="font-semibold text-purple-800 mb-2">便于部署</h3>
+                        <p class="text-purple-700 text-sm">适合服务器部署，配置随代码一起管理</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 注意事项 -->
+            <section>
+                <h2 class="text-2xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <i class="fa fa-exclamation-triangle text-orange-500"></i>
+                    注意事项
+                </h2>
+                
+                <div class="bg-orange-50 border border-orange-200 rounded-lg p-6">
+                    <ul class="space-y-3 text-orange-800">
+                        <li class="flex items-start gap-2">
+                            <i class="fa fa-lock text-orange-600 mt-1"></i>
+                            <span><strong>安全性：</strong>API密钥是敏感信息，请确保文件的访问权限设置合理</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fa fa-code text-orange-600 mt-1"></i>
+                            <span><strong>格式：</strong>编辑时请保持JavaScript语法正确，注意引号和逗号</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fa fa-copy text-orange-600 mt-1"></i>
+                            <span><strong>备份：</strong>修改前建议备份原文件，以防配置错误</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fa fa-refresh text-orange-600 mt-1"></i>
+                            <span><strong>生效：</strong>修改后需要刷新浏览器页面才能生效</span>
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <!-- 操作按钮 -->
+            <section class="text-center pt-6 border-t border-gray-200">
+                <div class="flex justify-center gap-4">
+                    <button onclick="window.open('index.html', '_blank')" class="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                        <i class="fa fa-home mr-2"></i>
+                        返回主页面
+                    </button>
+                    <button onclick="window.open('config-in-file.html', '_blank')" class="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors">
+                        <i class="fa fa-eye mr-2"></i>
+                        查看配置状态
+                    </button>
+                </div>
+            </section>
+        </div>
+    </div>
+</body>
+</html>

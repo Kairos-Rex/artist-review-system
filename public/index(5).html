@@ -192,7 +192,7 @@
         <!-- 左侧：模板区域 -->
         <div class="w-1/4 bg-white shadow-md overflow-y-auto p-5">
             <div class="mb-4">
-                <h2 class="text-lg font-semibold mb-4">模板库</h2>
+                <h2 class="text-lg font-semibold mb-4">收藏夹</h2>
             </div>
             
             <!-- 分类按钮组 - 竖向排列 -->
@@ -206,13 +206,13 @@
             <!-- 模板统计和设置 -->
             <div class="flex items-center justify-between mb-4 text-sm">
                 <div class="text-neutral">
-                    <span id="templateCount">0</span> 个模板
+                    <span id="templateCount">0</span> 个收藏
                 </div>
                 <div class="flex gap-2">
                     <button id="templateSettingsBtn" class="text-neutral hover:text-primary p-1 rounded-full hover:bg-gray-100 transition-colors">
                         <i class="fa fa-cog"></i>
                     </button>
-                    <button id="refreshTemplatesBtn" class="text-neutral hover:text-primary p-1 rounded-full hover:bg-gray-100 transition-colors" title="刷新模板和分类">
+                    <button id="refreshTemplatesBtn" class="text-neutral hover:text-primary p-1 rounded-full hover:bg-gray-100 transition-colors" title="刷新收藏和分类">
                         <i class="fa fa-refresh"></i>
                     </button>
                 </div>
@@ -222,7 +222,7 @@
             <div class="relative">
                 <div id="templateContainer" class="flex flex-col gap-2 max-h-[400px] overflow-y-auto">
                     <!-- 模板项目将通过JS动态生成 -->
-                    <div class="text-neutral italic text-center py-6">暂无模板，请创建新模板</div>
+                    <div class="text-neutral italic text-center py-6">暂无收藏，请创建新收藏</div>
                 </div>
             </div>
         </div>
@@ -354,7 +354,7 @@
                 </div>
                 <div id="recentTemplatesContainer" class="flex flex-col gap-2 pb-2 max-h-[200px] overflow-y-auto">
                     <!-- 最近使用的模板将通过JS动态生成 -->
-                    <div class="text-neutral italic text-center py-2 w-full">暂无最近使用的模板</div>
+                    <div class="text-neutral italic text-center py-2 w-full">暂无最近使用的收藏</div>
                 </div>
             </div>
             
@@ -363,7 +363,7 @@
                 <div class="flex items-center justify-between mb-4">
                     <h2 class="text-lg font-semibold">话术咒语</h2>
                     <button id="saveTemplateBtn" class="bg-secondary hover:bg-secondary/90 text-white px-3 py-1 rounded-lg shadow btn-hover flex items-center gap-1 btn-text-nowrap text-sm">
-                        <i class="fa fa-save"></i> 保存模板
+                        <i class="fa fa-save"></i> 保存收藏
                     </button>
                 </div>
             </div>
@@ -437,14 +437,20 @@
         let confirmCallback = null;
         let draggedItem = null; // 用于跟踪正在拖动的项目
         let historyRecords = []; // 历史记录数组
-        let templates = []; // 模板数组
-        let templateCategories = ['默认分类']; // 模板分类数组
-        let currentTemplatePage = 0; // 当前模板页码
-        const MAX_TEMPLATES_PER_PAGE = 10; // 每页最多显示的模板数量（两行共10个）
-        const MAX_HISTORY_RECORDS = 6; // 最大历史记录数量
-        const MAX_RECENT_TEMPLATES = 3; // 最大最近使用模板数量
-        let draggedTemplateId = null; // 当前正在拖动的模板ID
-        let recentTemplates = []; // 最近使用的模板ID数组
+        // 新的收藏夹数据结构
+        let favoriteFolders = []; // 收藏夹数组
+        let currentActiveFolderId = null; // 当前选中的收藏夹ID
+        let currentActiveCategory = 'all'; // 当前选中的分类
+        let currentTemplatePage = 0; // 当前收藏页码
+        const MAX_FAVORITES_PER_PAGE = 10; // 每页最多显示的收藏数量（两行共10个）
+        let recentFavorites = []; // 最近使用的收藏ID数组
+        const MAX_RECENT_FAVORITES = 3; // 最大最近使用收藏数量
+        let draggedFavoriteId = null; // 当前正在拖动的收藏ID
+        
+        // 兼容性变量（用于数据迁移）
+        let favorites = []; // 旧的收藏数组
+        let favoriteCategories = ['默认分类']; // 旧的收藏分类数组
+        
 
         // 自定义弹窗函数
         function showCustomAlert(message, title = '提示') {
@@ -528,14 +534,17 @@
 
         // 页面加载完成后初始化
         window.onload = function() {
+            // 初始化当前选中的分类
+            currentActiveCategory = 'all';
+            
             // 从本地存储加载历史记录
             loadHistoryRecords();
             
-            // 从本地存储加载模板和分类
-            loadTemplatesAndCategories();
+            // 加载收藏夹数据（新系统）
+            loadFavoriteFolders();
             
-            // 从本地存储加载最近使用的模板
-            loadRecentTemplates();
+            // 从本地存储加载最近使用的收藏
+            loadRecentFavorites();
             
             // 初始化应用数据
             initializeAppData();
@@ -555,11 +564,14 @@
             // 初始化生成文本框高度
             adjustGeneratedContainerHeight();
             
-            // 渲染模板
-            renderTemplates();
-            
-            // 渲染最近使用的模板
-            renderRecentTemplates();
+            // 渲染收藏夹标签页
+            renderFolderTabs();
+            // 渲染分类按钮
+            renderCategoryButtons();
+            // 渲染收藏
+            renderFavorites();
+            // 渲染最近使用的收藏
+            renderRecentFavorites();
             
             // 渲染历史记录
             renderHistoryRecords();
@@ -652,17 +664,17 @@
             document.getElementById('resetBtnResult').addEventListener('click', resetSelection);
             document.getElementById('resetBtnPanel').addEventListener('click', resetSelection);
             
-            // 保存模板按钮
-            document.getElementById('saveTemplateBtn').addEventListener('click', saveCurrentTemplate);
+            // 保存收藏按钮
+            document.getElementById('saveTemplateBtn').addEventListener('click', saveCurrentFavorite);
             
             // 新设置按钮
             document.getElementById('newSettingsBtn').addEventListener('click', openConfigPanel);
             
-            // 模板设置按钮
-            document.getElementById('templateSettingsBtn').addEventListener('click', openTemplateSettings);
+            // 收藏设置按钮
+            document.getElementById('templateSettingsBtn').addEventListener('click', openFavoriteSettings);
             
-            // 刷新模板按钮
-            document.getElementById('refreshTemplatesBtn').addEventListener('click', refreshTemplatesAndCategories);
+            // 刷新收藏按钮
+            document.getElementById('refreshTemplatesBtn').addEventListener('click', refreshFavoritesAndCategories);
             
             // 添加项目按钮
             document.querySelectorAll('.add-item-btn').forEach(btn => {
@@ -1698,10 +1710,10 @@
         // 重置选择
         function resetSelection() {
             selection = {
-                greeting: { id: null, subOptions: [] },
+                greeting: [],
                 strength: [],
                 issue: [],
-                closing: { id: null, subOptions: [] }
+                closing: []
             };
             
             renderAllContent();
@@ -2100,8 +2112,8 @@
             // 目前基本的拖拽功能已经在createItemElement中实现
         }
 
-        // 保存当前模板
-        async function saveCurrentTemplate() {
+        // 保存当前收藏
+        async function saveCurrentFavorite() {
             // 检查是否有选择内容
             const hasSelection = selection.greeting.length > 0 || 
                                 selection.strength.length > 0 || 
@@ -2109,14 +2121,24 @@
                                 selection.closing.length > 0;
             
             if (!hasSelection) {
-                showNotification('请先选择一些内容再保存模板', 'warning');
+                showNotification('请先选择一些内容再保存收藏', 'warning');
                 return;
             }
             
-            const name = await showCustomPrompt('请输入模板名称：');
+            // 如果有多个收藏夹，让用户选择目标收藏夹
+            let targetFolderId = currentActiveFolderId;
+            if (favoriteFolders.length > 1) {
+                const folderOptions = favoriteFolders.map(f => ({ value: f.id, text: f.name }));
+                targetFolderId = await showFolderSelector('选择收藏夹：', folderOptions, currentActiveFolderId);
+                if (!targetFolderId) return; // 用户取消
+            }
+            
+            const name = await showCustomPrompt('请输入收藏名称：');
             if (name && name.trim()) {
-                const category = await showCustomPrompt('请输入模板分类（可选）：', '默认分类') || '默认分类';
-                const template = {
+                const targetFolder = favoriteFolders.find(f => f.id === targetFolderId);
+                const category = await showCustomPrompt('请输入收藏分类（可选）：', '默认分类') || '默认分类';
+                
+                const favorite = {
                     id: 't' + Date.now(),
                     name: name.trim(),
                     category: category.trim(),
@@ -2124,196 +2146,541 @@
                     createdAt: new Date().toLocaleString()
                 };
                 
-                templates.push(template);
-                saveTemplatesAndCategories();
-                renderTemplates();
+                // 添加到目标收藏夹
+                targetFolder.favorites.push(favorite);
+                
+                // 更新分类列表
+                if (!targetFolder.categories.includes(favorite.category)) {
+                    targetFolder.categories.push(favorite.category);
+                }
+                
+                saveFavoriteFolders();
+                updateCompatibilityVariables();
+                renderFavorites();
                 
                 // 添加到最近使用
-                addToRecentTemplates(template.id);
+                addToRecentFavorites(favorite.id);
                 
-                showNotification('模板保存成功！', 'success');
+                showNotification(`收藏已保存到"${targetFolder.name}"！`, 'success');
             }
         }
-
-        // 保存模板和分类到本地存储
-        function saveTemplatesAndCategories() {
-            try {
-                localStorage.setItem('templates', JSON.stringify(templates));
-                localStorage.setItem('templateCategories', JSON.stringify(templateCategories));
-            } catch (e) {
-                console.error('保存模板失败:', e);
+        
+        // 创建新收藏夹
+        async function createNewFolder() {
+            const name = await showCustomPrompt('请输入收藏夹名称：');
+            if (name && name.trim()) {
+                const newFolder = {
+                    id: 'folder_' + Date.now(),
+                    name: name.trim(),
+                    favorites: [],
+                    categories: ['默认分类'],
+                    createdAt: new Date().toLocaleString()
+                };
+                
+                favoriteFolders.push(newFolder);
+                currentActiveFolderId = newFolder.id;
+                saveFavoriteFolders();
+                updateCompatibilityVariables();
+                renderFolderTabs();
+                renderFavorites();
+                
+                showNotification(`收藏夹"${name.trim()}"创建成功！`, 'success');
             }
         }
-
-        // 从本地存储加载模板和分类
-        function loadTemplatesAndCategories() {
-            try {
-                const savedTemplates = localStorage.getItem('templates');
-                if (savedTemplates) {
-                    templates = JSON.parse(savedTemplates);
+        
+        // 重命名收藏夹
+        async function renameFolder(folderId) {
+            const folder = favoriteFolders.find(f => f.id === folderId);
+            if (!folder) return;
+            
+            const newName = await showCustomPrompt('请输入新的收藏夹名称：', folder.name);
+            if (newName && newName.trim() && newName.trim() !== folder.name) {
+                folder.name = newName.trim();
+                saveFavoriteFolders();
+                renderFolderTabs();
+                showNotification('收藏夹重命名成功！', 'success');
+            }
+        }
+        
+        // 删除收藏夹
+        async function deleteFolder(folderId) {
+            if (favoriteFolders.length <= 1) {
+                showNotification('至少需要保留一个收藏夹', 'warning');
+                return;
+            }
+            
+            const folder = favoriteFolders.find(f => f.id === folderId);
+            if (!folder) return;
+            
+            const confirmed = await showCustomConfirm(`确定要删除收藏夹"${folder.name}"吗？\n\n此操作将删除该收藏夹中的所有收藏（${folder.favorites.length}个），且无法恢复。`);
+            if (confirmed) {
+                favoriteFolders = favoriteFolders.filter(f => f.id !== folderId);
+                
+                // 如果删除的是当前活动收藏夹，切换到第一个收藏夹
+                if (currentActiveFolderId === folderId) {
+                    currentActiveFolderId = favoriteFolders[0].id;
                 }
                 
-                const savedCategories = localStorage.getItem('templateCategories');
-                if (savedCategories) {
-                    templateCategories = JSON.parse(savedCategories);
+                saveFavoriteFolders();
+                updateCompatibilityVariables();
+                renderFolderTabs();
+                renderFavorites();
+                
+                showNotification(`收藏夹"${folder.name}"已删除`, 'info');
+            }
+        }
+        
+        // 切换收藏夹
+        function switchFolder(folderId) {
+            if (currentActiveFolderId !== folderId) {
+                currentActiveFolderId = folderId;
+                saveFavoriteFolders();
+                updateCompatibilityVariables();
+                renderFavorites();
+                renderCategoryButtons();
+                
+                const folder = getCurrentFolder();
+                if (folder) {
+                    showNotification(`已切换到"${folder.name}"`, 'info');
+                }
+            }
+        }
+        
+        // 显示收藏夹选择器
+        async function showFolderSelector(title, options, defaultValue) {
+            return new Promise((resolve) => {
+                const overlay = document.createElement('div');
+                overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                
+                const dialog = document.createElement('div');
+                dialog.className = 'bg-white rounded-lg p-6 max-w-md w-full mx-4';
+                
+                dialog.innerHTML = `
+                    <h3 class="text-lg font-semibold mb-4">${title}</h3>
+                    <div class="space-y-2 mb-6">
+                        ${options.map(option => `
+                            <label class="flex items-center space-x-2 cursor-pointer">
+                                <input type="radio" name="folder" value="${option.value}" ${option.value === defaultValue ? 'checked' : ''} class="text-primary">
+                                <span>${option.text}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                    <div class="flex gap-2 justify-end">
+                        <button class="cancel-btn px-4 py-2 text-gray-600 hover:text-gray-800">取消</button>
+                        <button class="confirm-btn px-4 py-2 bg-primary text-white rounded hover:bg-primary/90">确定</button>
+                    </div>
+                `;
+                
+                overlay.appendChild(dialog);
+                document.body.appendChild(overlay);
+                
+                const cancelBtn = dialog.querySelector('.cancel-btn');
+                const confirmBtn = dialog.querySelector('.confirm-btn');
+                
+                cancelBtn.addEventListener('click', () => {
+                    document.body.removeChild(overlay);
+                    resolve(null);
+                });
+                
+                confirmBtn.addEventListener('click', () => {
+                    const selected = dialog.querySelector('input[name="folder"]:checked');
+                    document.body.removeChild(overlay);
+                    resolve(selected ? selected.value : null);
+                });
+                
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) {
+                        document.body.removeChild(overlay);
+                        resolve(null);
+                    }
+                });
+            });
+        }
+
+        // 保存收藏夹到本地存储
+        function saveFavoriteFolders() {
+            try {
+                localStorage.setItem('favoriteFolders', JSON.stringify(favoriteFolders));
+                localStorage.setItem('currentActiveFolderId', currentActiveFolderId);
+            } catch (e) {
+                console.error('保存收藏夹失败:', e);
+            }
+        }
+
+        // 从本地存储加载收藏夹
+        function loadFavoriteFolders() {
+            try {
+                const savedFolders = localStorage.getItem('favoriteFolders');
+                const savedActiveFolderId = localStorage.getItem('currentActiveFolderId');
+                
+                if (savedFolders) {
+                    favoriteFolders = JSON.parse(savedFolders);
+                    currentActiveFolderId = savedActiveFolderId;
                 } else {
-                    // 从现有模板中提取分类
-                    const categories = new Set(['默认分类']);
-                    templates.forEach(template => {
-                        if (template.category) {
-                            categories.add(template.category);
-                        }
-                    });
-                    templateCategories = Array.from(categories);
+                    // 检查是否需要从旧数据迁移
+                    migrateOldFavoritesToFolders();
                 }
+                
+                // 确保至少有一个默认收藏夹
+                if (favoriteFolders.length === 0) {
+                    createDefaultFolder();
+                }
+                
+                // 确保当前活动收藏夹有效
+                if (!currentActiveFolderId || !favoriteFolders.find(f => f.id === currentActiveFolderId)) {
+                    currentActiveFolderId = favoriteFolders[0].id;
+                }
+                
             } catch (e) {
-                console.error('加载模板失败:', e);
-                templates = [];
-                templateCategories = ['默认分类'];
+                console.error('加载收藏夹失败:', e);
+                createDefaultFolder();
             }
         }
+        
+        // 创建默认收藏夹
+        function createDefaultFolder() {
+            const defaultFolder = {
+                id: 'folder_' + Date.now(),
+                name: '我的收藏',
+                favorites: [],
+                categories: ['默认分类'],
+                createdAt: new Date().toLocaleString()
+            };
+            favoriteFolders = [defaultFolder];
+            currentActiveFolderId = defaultFolder.id;
+            saveFavoriteFolders();
+        }
+        
+        // 迁移旧收藏数据到新收藏夹系统
+        function migrateOldFavoritesToFolders() {
+            try {
+                // 检查旧的收藏数据
+                const savedFavorites = localStorage.getItem('favorites');
+                const savedCategories = localStorage.getItem('favoriteCategories');
+                const oldTemplates = localStorage.getItem('templates');
+                const oldTemplateCategories = localStorage.getItem('templateCategories');
+                
+                let oldFavorites = [];
+                let oldCategories = ['默认分类'];
+                
+                // 优先使用favorites数据
+                if (savedFavorites) {
+                    oldFavorites = JSON.parse(savedFavorites);
+                    if (savedCategories) {
+                        oldCategories = JSON.parse(savedCategories);
+                    }
+                } else if (oldTemplates) {
+                    // 从templates迁移
+                    console.log('检测到旧的模板数据，正在迁移到新收藏夹系统...');
+                    oldFavorites = JSON.parse(oldTemplates);
+                    if (oldTemplateCategories) {
+                        oldCategories = JSON.parse(oldTemplateCategories);
+                    }
+                }
+                
+                if (oldFavorites.length > 0) {
+                    // 创建默认收藏夹并迁移数据
+                    const migratedFolder = {
+                        id: 'folder_' + Date.now(),
+                        name: '我的收藏',
+                        favorites: oldFavorites,
+                        categories: oldCategories,
+                        createdAt: new Date().toLocaleString()
+                    };
+                    
+                    favoriteFolders = [migratedFolder];
+                    currentActiveFolderId = migratedFolder.id;
+                    
+                    console.log(`成功迁移 ${oldFavorites.length} 个收藏到新收藏夹系统`);
+                    
+                    // 保存新数据并清理旧数据
+                    saveFavoriteFolders();
+                    localStorage.removeItem('favorites');
+                    localStorage.removeItem('favoriteCategories');
+                    localStorage.removeItem('templates');
+                    localStorage.removeItem('templateCategories');
+                }
+                
+            } catch (e) {
+                console.error('迁移旧收藏数据失败:', e);
+            }
+        }
+        
+        // 兼容性函数：保存收藏和分类到本地存储（保持向后兼容）
+        function saveFavoritesAndCategories() {
+            saveFavoriteFolders();
+        }
 
-        // 渲染模板
-        function renderTemplates() {
+        // 兼容性函数：从本地存储加载收藏和分类（保持向后兼容）
+        function loadFavoritesAndCategories() {
+            loadFavoriteFolders();
+            // 更新兼容性变量
+            updateCompatibilityVariables();
+        }
+        
+        // 更新兼容性变量
+        function updateCompatibilityVariables() {
+            const currentFolder = getCurrentFolder();
+            if (currentFolder) {
+                favorites = currentFolder.favorites;
+                favoriteCategories = currentFolder.categories;
+            } else {
+                favorites = [];
+                favoriteCategories = ['默认分类'];
+            }
+        }
+        
+        // 获取当前活动的收藏夹
+        function getCurrentFolder() {
+            return favoriteFolders.find(f => f.id === currentActiveFolderId);
+        }
+
+        // 渲染收藏
+        // 渲染收藏夹标签页
+        function renderFolderTabs() {
+            const tabsContainer = document.getElementById('folderTabs');
+            if (!tabsContainer) {
+                // 如果容器不存在，创建它
+                const favoritesSection = document.querySelector('.favorites-section');
+                if (favoritesSection) {
+                    const tabsDiv = document.createElement('div');
+                    tabsDiv.id = 'folderTabs';
+                    tabsDiv.className = 'flex items-center gap-2 mb-4 border-b border-gray-200 pb-2';
+                    favoritesSection.insertBefore(tabsDiv, favoritesSection.firstChild);
+                }
+            }
+            
+            const container = document.getElementById('folderTabs');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            
+            // 渲染收藏夹标签
+            favoriteFolders.forEach(folder => {
+                const tab = document.createElement('div');
+                tab.className = `px-3 py-1 rounded cursor-pointer transition-all flex items-center gap-2 ${
+                    folder.id === currentActiveFolderId ? 
+                    'bg-primary text-white' : 
+                    'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                }`;
+                
+                tab.innerHTML = `
+                    <span>${folder.name}</span>
+                    <span class="text-xs opacity-75">(${folder.favorites.length})</span>
+                    ${favoriteFolders.length > 1 ? `
+                        <button class="ml-1 opacity-75 hover:opacity-100" onclick="event.stopPropagation(); showFolderMenu('${folder.id}', event)" title="管理收藏夹">
+                            <i class="fa fa-ellipsis-v text-xs"></i>
+                        </button>
+                    ` : ''}
+                `;
+                
+                tab.addEventListener('click', () => switchFolder(folder.id));
+                container.appendChild(tab);
+            });
+            
+            // 添加新建收藏夹按钮
+            const addBtn = document.createElement('button');
+            addBtn.className = 'px-3 py-1 rounded border-2 border-dashed border-gray-300 hover:border-primary text-gray-500 hover:text-primary transition-all';
+            addBtn.innerHTML = '<i class="fa fa-plus"></i> 新建';
+            addBtn.addEventListener('click', createNewFolder);
+            container.appendChild(addBtn);
+        }
+        
+        // 显示收藏夹菜单
+        function showFolderMenu(folderId, event) {
+            const menu = document.createElement('div');
+            menu.className = 'absolute bg-white border border-gray-200 rounded shadow-lg py-1 z-50';
+            menu.style.left = event.pageX + 'px';
+            menu.style.top = event.pageY + 'px';
+            
+            menu.innerHTML = `
+                <button class="block w-full text-left px-3 py-1 hover:bg-gray-100" onclick="renameFolder('${folderId}'); document.body.removeChild(this.parentElement)">
+                    <i class="fa fa-edit mr-2"></i>重命名
+                </button>
+                <button class="block w-full text-left px-3 py-1 hover:bg-gray-100 text-red-600" onclick="deleteFolder('${folderId}'); document.body.removeChild(this.parentElement)">
+                    <i class="fa fa-trash mr-2"></i>删除
+                </button>
+            `;
+            
+            document.body.appendChild(menu);
+            
+            // 点击其他地方关闭菜单
+            setTimeout(() => {
+                document.addEventListener('click', function closeMenu() {
+                    if (document.body.contains(menu)) {
+                        document.body.removeChild(menu);
+                    }
+                    document.removeEventListener('click', closeMenu);
+                }, 100);
+            }, 100);
+        }
+        
+        function renderFavorites() {
             const container = document.getElementById('templateContainer');
             if (!container) return;
 
             container.innerHTML = '';
             
-            if (templates.length === 0) {
-                container.innerHTML = '<div class="text-neutral italic text-center py-6">暂无模板，请创建新模板</div>';
-                updateTemplateCount(0);
+            // 获取当前收藏夹
+            const currentFolder = getCurrentFolder();
+            if (!currentFolder) {
+                container.innerHTML = '<div class="text-neutral italic text-center py-6">收藏夹不存在</div>';
+                updateFavoriteCount(0);
+                return;
+            }
+            
+            if (currentFolder.favorites.length === 0) {
+                container.innerHTML = '<div class="text-neutral italic text-center py-6">暂无收藏，请创建新收藏</div>';
+                updateFavoriteCount(0);
                 return;
             }
 
-            // 获取当前选中的分类
-            const activeCategory = document.querySelector('.category-btn-active')?.getAttribute('data-category') || 'all';
+            // 使用全局变量获取当前选中的分类
+            const activeCategory = currentActiveCategory;
             
-            // 过滤模板
-            const filteredTemplates = activeCategory === 'all' ? 
-                templates : 
-                templates.filter(template => template.category === activeCategory);
+            // 过滤收藏
+            const filteredFavorites = activeCategory === 'all' ? 
+                currentFolder.favorites : 
+                currentFolder.favorites.filter(favorite => favorite.category === activeCategory);
             
-            if (filteredTemplates.length === 0) {
-                container.innerHTML = '<div class="text-neutral italic text-center py-6">该分类下暂无模板</div>';
-                updateTemplateCount(0);
+            if (filteredFavorites.length === 0) {
+                container.innerHTML = '<div class="text-neutral italic text-center py-6">该分类下暂无收藏</div>';
+                updateFavoriteCount(0);
                 return;
             }
 
-            filteredTemplates.forEach(template => {
+            filteredFavorites.forEach(favorite => {
                 const div = document.createElement('div');
-                div.className = 'p-3 border border-gray-200 rounded-lg cursor-pointer transition-all hover:border-primary hover:shadow-md group';
-                div.setAttribute('data-id', template.id);
+                div.className = 'p-3 border border-gray-200 rounded-lg cursor-pointer transition-all hover:border-primary hover:shadow-md group relative';
+                div.setAttribute('data-id', favorite.id);
                 
                 div.innerHTML = `
-                    <div class="text-sm font-medium mb-1">${template.name}</div>
-                    <div class="text-xs text-neutral mb-2">${template.category}</div>
-                    <div class="text-xs text-neutral">${template.createdAt}</div>
+                    <div class="text-sm font-medium mb-1">${favorite.name}</div>
+                    <div class="text-xs text-neutral mb-2">${favorite.category}</div>
+                    <div class="text-xs text-neutral">${favorite.createdAt}</div>
                     <div class="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                        <button class="apply-template-btn text-xs text-primary hover:text-primary/80 p-1" data-id="${template.id}" title="应用模板">
+                        <button class="apply-favorite-btn text-xs text-primary hover:text-primary/80 p-1" data-id="${favorite.id}" title="应用收藏">
                             <i class="fa fa-check"></i>
                         </button>
-                        <button class="edit-template-btn text-xs text-neutral hover:text-primary p-1" data-id="${template.id}" title="编辑模板">
+                        <button class="edit-favorite-btn text-xs text-neutral hover:text-primary p-1" data-id="${favorite.id}" title="编辑收藏">
                             <i class="fa fa-edit"></i>
                         </button>
-                        <button class="delete-template-btn text-xs text-red-500 hover:text-red-700 p-1" data-id="${template.id}" title="删除模板">
+                        <button class="delete-favorite-btn text-xs text-red-500 hover:text-red-700 p-1" data-id="${favorite.id}" title="删除收藏">
                             <i class="fa fa-trash"></i>
                         </button>
                     </div>
                 `;
                 
-                // 应用模板
-                div.querySelector('.apply-template-btn').addEventListener('click', function(e) {
+                // 应用收藏
+                div.querySelector('.apply-favorite-btn').addEventListener('click', function(e) {
                     e.stopPropagation();
-                    applyTemplate(template.id);
+                    applyFavorite(favorite.id);
                 });
                 
-                // 编辑模板
-                div.querySelector('.edit-template-btn').addEventListener('click', function(e) {
+                // 编辑收藏
+                div.querySelector('.edit-favorite-btn').addEventListener('click', function(e) {
                     e.stopPropagation();
-                    editTemplate(template.id);
+                    editFavorite(favorite.id);
                 });
                 
-                // 删除模板
-                div.querySelector('.delete-template-btn').addEventListener('click', function(e) {
+                // 删除收藏
+                div.querySelector('.delete-favorite-btn').addEventListener('click', function(e) {
                     e.stopPropagation();
-                    deleteTemplate(template.id);
+                    deleteFavorite(favorite.id);
                 });
                 
-                // 点击应用模板
+                // 点击应用收藏
                 div.addEventListener('click', function() {
-                    applyTemplate(template.id);
+                    applyFavorite(favorite.id);
                 });
                 
                 container.appendChild(div);
             });
             
-            updateTemplateCount(filteredTemplates.length);
+            updateFavoriteCount(filteredFavorites.length);
         }
 
-        // 更新模板数量显示
-        function updateTemplateCount(count) {
+        // 更新收藏数量显示
+        function updateFavoriteCount(count) {
             const countElement = document.getElementById('templateCount');
             if (countElement) {
                 countElement.textContent = count;
             }
         }
 
-        // 应用模板
-        function applyTemplate(templateId) {
-            const template = templates.find(t => t.id === templateId);
-            if (template && template.selection) {
-                selection = JSON.parse(JSON.stringify(template.selection));
+        // 应用收藏
+        function applyFavorite(favoriteId) {
+            // 在当前收藏夹中查找收藏
+            const currentFolder = getCurrentFolder();
+            if (!currentFolder) return;
+            
+            const favorite = currentFolder.favorites.find(f => f.id === favoriteId);
+            if (favorite && favorite.selection) {
+                selection = JSON.parse(JSON.stringify(favorite.selection));
                 renderAllContent();
                 updateResult();
                 
                 // 添加到最近使用
-                addToRecentTemplates(templateId);
+                addToRecentFavorites(favoriteId);
                 
-                showNotification(`已应用模板：${template.name}`, 'success');
+                showNotification(`已应用收藏：${favorite.name}`, 'success');
             }
         }
 
-        // 编辑模板
-        async function editTemplate(templateId) {
-            const template = templates.find(t => t.id === templateId);
-            if (!template) return;
+        // 编辑收藏
+        async function editFavorite(favoriteId) {
+            // 在当前收藏夹中查找收藏
+            const currentFolder = getCurrentFolder();
+            if (!currentFolder) return;
             
-            const newName = await showCustomPrompt('编辑模板名称：', template.name);
+            const favorite = currentFolder.favorites.find(f => f.id === favoriteId);
+            if (!favorite) return;
+            
+            const newName = await showCustomPrompt('编辑收藏名称：', favorite.name);
             if (newName !== null && newName.trim()) {
-                const newCategory = await showCustomPrompt('编辑模板分类：', template.category);
+                const newCategory = await showCustomPrompt('编辑收藏分类：', favorite.category);
                 if (newCategory !== null) {
-                    template.name = newName.trim();
-                    template.category = newCategory.trim() || '默认分类';
+                    favorite.name = newName.trim();
+                    favorite.category = newCategory.trim() || '默认分类';
                     
-                    // 更新分类列表
-                    if (!templateCategories.includes(template.category)) {
-                        templateCategories.push(template.category);
+                    // 更新当前收藏夹的分类列表
+                    if (!currentFolder.categories.includes(favorite.category)) {
+                        currentFolder.categories.push(favorite.category);
                     }
                     
-                    saveTemplatesAndCategories();
-                    renderTemplates();
+                    saveFavoriteFolders();
+                    updateCompatibilityVariables();
+                    renderFavorites();
                     renderCategoryButtons();
-                    showNotification('模板修改成功！', 'success');
+                    showNotification('收藏修改成功！', 'success');
                 }
             }
         }
 
-        // 删除模板
-        async function deleteTemplate(templateId) {
-            const template = templates.find(t => t.id === templateId);
-            const confirmed = await showCustomConfirm(`确定要删除模板"${template.name}"吗？`);
-            if (template && confirmed) {
-                templates = templates.filter(t => t.id !== templateId);
+        // 删除收藏
+        async function deleteFavorite(favoriteId) {
+            // 在当前收藏夹中查找收藏
+            const currentFolder = getCurrentFolder();
+            if (!currentFolder) return;
+            
+            const favorite = currentFolder.favorites.find(f => f.id === favoriteId);
+            if (!favorite) return;
+            
+            const confirmed = await showCustomConfirm(`确定要删除收藏"${favorite.name}"吗？`);
+            if (confirmed) {
+                // 从当前收藏夹中移除
+                currentFolder.favorites = currentFolder.favorites.filter(f => f.id !== favoriteId);
                 
                 // 从最近使用中移除
-                recentTemplates = recentTemplates.filter(id => id !== templateId);
-                saveRecentTemplates();
+                recentFavorites = recentFavorites.filter(id => id !== favoriteId);
+                saveRecentFavorites();
                 
-                saveTemplatesAndCategories();
-                renderTemplates();
-                renderRecentTemplates();
-                showNotification('模板删除成功！', 'success');
+                saveFavoriteFolders();
+                updateCompatibilityVariables();
+                renderFavorites();
+                renderRecentFavorites();
+                renderFolderTabs(); // 更新收藏夹标签页的计数
+                showNotification('收藏删除成功！', 'success');
             }
         }
 
@@ -2322,8 +2689,8 @@
             const container = document.getElementById('categoryButtons');
             if (!container) return;
 
-            // 保存当前选中的分类
-            const currentActive = document.querySelector('.category-btn-active')?.getAttribute('data-category') || 'all';
+            // 使用全局变量保存当前选中的分类
+            const currentActive = currentActiveCategory;
             
             container.innerHTML = '';
             
@@ -2337,8 +2704,12 @@
             }
             container.appendChild(allBtn);
             
+            // 获取当前收藏夹的分类
+            const currentFolder = getCurrentFolder();
+            const categories = currentFolder ? currentFolder.categories : [];
+            
             // 添加其他分类按钮
-            templateCategories.forEach(category => {
+            categories.forEach(category => {
                 if (category !== '所有分类') {
                     const btn = document.createElement('button');
                     btn.className = 'category-btn text-left';
@@ -2354,6 +2725,9 @@
             // 绑定点击事件
             container.querySelectorAll('.category-btn').forEach(btn => {
                 btn.addEventListener('click', function() {
+                    // 更新全局变量
+                    currentActiveCategory = this.getAttribute('data-category');
+                    
                     // 移除所有active类
                     container.querySelectorAll('.category-btn').forEach(b => {
                         b.classList.remove('category-btn-active');
@@ -2363,87 +2737,87 @@
                     this.classList.add('category-btn-active');
                     
                     // 重新渲染模板
-                    renderTemplates();
+                    renderFavorites();
                 });
             });
         }
 
-        // 刷新模板和分类
-        function refreshTemplatesAndCategories() {
-            loadTemplatesAndCategories();
-            renderTemplates();
+        // 刷新收藏和分类
+        function refreshFavoritesAndCategories() {
+            loadFavoritesAndCategories();
+            renderFavorites();
             renderCategoryButtons();
-            showNotification('已刷新模板和分类', 'info');
+            showNotification('已刷新收藏和分类', 'info');
         }
 
-        // 添加到最近使用模板
-        function addToRecentTemplates(templateId) {
+        // 添加到最近使用收藏
+        function addToRecentFavorites(favoriteId) {
             // 移除已存在的
-            recentTemplates = recentTemplates.filter(id => id !== templateId);
+            recentFavorites = recentFavorites.filter(id => id !== favoriteId);
             
             // 添加到开头
-            recentTemplates.unshift(templateId);
+            recentFavorites.unshift(favoriteId);
             
             // 限制数量
-            if (recentTemplates.length > MAX_RECENT_TEMPLATES) {
-                recentTemplates = recentTemplates.slice(0, MAX_RECENT_TEMPLATES);
+            if (recentFavorites.length > MAX_RECENT_FAVORITES) {
+                recentFavorites = recentFavorites.slice(0, MAX_RECENT_FAVORITES);
             }
             
-            saveRecentTemplates();
-            renderRecentTemplates();
+            saveRecentFavorites();
+            renderRecentFavorites();
         }
 
-        // 保存最近使用模板
-        function saveRecentTemplates() {
+        // 保存最近使用收藏
+        function saveRecentFavorites() {
             try {
-                localStorage.setItem('recentTemplates', JSON.stringify(recentTemplates));
+                localStorage.setItem('recentFavorites', JSON.stringify(recentFavorites));
             } catch (e) {
-                console.error('保存最近使用模板失败:', e);
+                console.error('保存最近使用收藏失败:', e);
             }
         }
 
-        // 加载最近使用模板
-        function loadRecentTemplates() {
+        // 加载最近使用收藏
+        function loadRecentFavorites() {
             try {
-                const saved = localStorage.getItem('recentTemplates');
+                const saved = localStorage.getItem('recentFavorites');
                 if (saved) {
-                    recentTemplates = JSON.parse(saved);
-                    // 过滤掉不存在的模板
-                    recentTemplates = recentTemplates.filter(id => 
-                        templates.some(t => t.id === id)
+                    recentFavorites = JSON.parse(saved);
+                    // 过滤掉不存在的收藏
+                    recentFavorites = recentFavorites.filter(id => 
+                        favorites.some(f => f.id === id)
                     );
                 }
             } catch (e) {
-                console.error('加载最近使用模板失败:', e);
-                recentTemplates = [];
+                console.error('加载最近使用收藏失败:', e);
+                recentFavorites = [];
             }
         }
 
-        // 渲染最近使用模板
-        function renderRecentTemplates() {
+        // 渲染最近使用收藏
+        function renderRecentFavorites() {
             const container = document.getElementById('recentTemplatesContainer');
             if (!container) return;
 
             container.innerHTML = '';
             
-            if (recentTemplates.length === 0) {
-                container.innerHTML = '<div class="text-neutral italic text-center py-2 w-full">暂无最近使用的模板</div>';
+            if (recentFavorites.length === 0) {
+                container.innerHTML = '<div class="text-neutral italic text-center py-2 w-full">暂无最近使用的收藏</div>';
                 return;
             }
 
-            recentTemplates.forEach(templateId => {
-                const template = templates.find(t => t.id === templateId);
-                if (template) {
+            recentFavorites.forEach(favoriteId => {
+                const favorite = favorites.find(f => f.id === favoriteId);
+                if (favorite) {
                     const div = document.createElement('div');
                     div.className = 'p-2 border border-gray-200 rounded cursor-pointer transition-all hover:border-primary hover:bg-blue-50';
                     
                     div.innerHTML = `
-                        <div class="text-sm font-medium">${template.name}</div>
-                        <div class="text-xs text-neutral">${template.category}</div>
+                        <div class="text-sm font-medium">${favorite.name}</div>
+                        <div class="text-xs text-neutral">${favorite.category}</div>
                     `;
                     
                     div.addEventListener('click', function() {
-                        applyTemplate(templateId);
+                        applyFavorite(favoriteId);
                     });
                     
                     container.appendChild(div);
@@ -2653,8 +3027,8 @@
         }
 
         // 打开模板设置
-        function openTemplateSettings() {
-            showNotification('模板设置功能开发中...', 'info');
+        function openFavoriteSettings() {
+            showNotification('收藏设置功能开发中...', 'info');
         }
 
         // 获取API密钥
@@ -2674,10 +3048,7 @@
 
         // 页面初始化完成后的额外处理
         document.addEventListener('DOMContentLoaded', function() {
-            // 确保分类按钮正确渲染
-            setTimeout(() => {
-                renderCategoryButtons();
-            }, 100);
+            // 页面DOM加载完成后的处理
         });
         
         // 设置弹窗相关功能
