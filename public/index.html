@@ -4033,6 +4033,26 @@
                                     </div>
                                 </div>
                                 
+                                <!-- 默认配置管理 -->
+                                <div class="bg-orange-50 p-4 rounded">
+                                    <h5 class="font-medium mb-3 flex items-center gap-2">
+                                        <i class="fa fa-star mr-1"></i>
+                                        默认配置管理
+                                    </h5>
+                                    <div class="grid grid-cols-2 gap-2 mb-2">
+                                        <button id="setDefaultConfigBtn" class="px-3 py-2 bg-orange-500 text-white rounded hover:bg-orange-600 text-sm">
+                                            <i class="fa fa-star mr-1"></i>设为默认
+                                        </button>
+                                        <button id="resetDefaultConfigBtn" class="px-3 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm">
+                                            <i class="fa fa-refresh mr-1"></i>重置默认
+                                        </button>
+                                    </div>
+                                    <div class="text-xs text-orange-700">
+                                        <i class="fa fa-info-circle mr-1"></i>
+                                        <span id="defaultConfigStatus">未设置默认配置</span>
+                                    </div>
+                                </div>
+                                
                                 <!-- 导入导出 -->
                                 <div class="bg-green-50 p-4 rounded">
                                     <h5 class="font-medium mb-3 flex items-center gap-2">
@@ -4144,6 +4164,9 @@
             
             // 初始化配置管理事件监听器
             setupConfigManagementListeners(modal);
+            
+            // 更新默认配置状态显示
+            updateDefaultConfigStatus();
             
             // 取消按钮
             document.getElementById('cancelSettings').addEventListener('click', function() {
@@ -4806,6 +4829,7 @@
         // 配置管理全局变量
         let configurations = {}; // 存储所有配置
         let currentConfigId = 'default'; // 当前配置ID
+        let defaultConfigData = null; // 默认内置配置数据
         
         // 配置数据结构
         function createDefaultConfig() {
@@ -4829,14 +4853,24 @@
         // 加载配置管理数据
         function loadConfigurations() {
             try {
+                // 首先加载默认内置配置
+                loadDefaultConfiguration();
+                
                 const saved = localStorage.getItem('configurations');
                 if (saved) {
                     configurations = JSON.parse(saved);
                 } else {
-                    // 创建默认配置
+                    // 如果有默认配置，使用默认配置；否则创建空的默认配置
                     configurations = {
-                        'default': createDefaultConfig()
+                        'default': defaultConfigData || createDefaultConfig()
                     };
+                }
+                
+                // 如果有默认配置且当前默认配置为空，应用默认配置
+                if (defaultConfigData && (!configurations['default'] || !configurations['default'].data)) {
+                    configurations['default'] = JSON.parse(JSON.stringify(defaultConfigData));
+                    configurations['default'].id = 'default';
+                    configurations['default'].name = '默认配置';
                 }
                 
                 // 加载当前配置ID
@@ -4849,7 +4883,7 @@
             } catch (e) {
                 console.error('加载配置失败:', e);
                 configurations = {
-                    'default': createDefaultConfig()
+                    'default': defaultConfigData || createDefaultConfig()
                 };
                 currentConfigId = 'default';
             }
@@ -5078,6 +5112,131 @@
             reader.readAsText(file);
         }
         
+        // ==================== 默认配置管理功能 ====================
+        
+        // 加载默认内置配置
+        function loadDefaultConfiguration() {
+            try {
+                const saved = localStorage.getItem('defaultConfigData');
+                if (saved) {
+                    defaultConfigData = JSON.parse(saved);
+                }
+            } catch (e) {
+                console.error('加载默认配置失败:', e);
+                defaultConfigData = null;
+            }
+        }
+        
+        // 保存默认内置配置
+        function saveDefaultConfiguration() {
+            try {
+                if (defaultConfigData) {
+                    localStorage.setItem('defaultConfigData', JSON.stringify(defaultConfigData));
+                } else {
+                    localStorage.removeItem('defaultConfigData');
+                }
+            } catch (e) {
+                console.error('保存默认配置失败:', e);
+            }
+        }
+        
+        // 设置当前配置为默认配置
+        function setCurrentAsDefaultConfiguration() {
+            try {
+                defaultConfigData = {
+                    id: 'default_builtin',
+                    name: '内置默认配置',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    data: {
+                        appData: JSON.parse(JSON.stringify(appData)),
+                        favoriteScripts: JSON.parse(JSON.stringify(favoriteScripts)),
+                        subOptionTags: JSON.parse(JSON.stringify(subOptionTags)),
+                        primaryOptionTags: JSON.parse(JSON.stringify(primaryOptionTags)),
+                        primaryOptionTagColors: JSON.parse(JSON.stringify(primaryOptionTagColors)),
+                        subOptionTagColors: JSON.parse(JSON.stringify(subOptionTagColors)),
+                        selection: JSON.parse(JSON.stringify(selection))
+                    }
+                };
+                
+                saveDefaultConfiguration();
+                
+                // 同时更新默认配置
+                configurations['default'] = JSON.parse(JSON.stringify(defaultConfigData));
+                configurations['default'].id = 'default';
+                configurations['default'].name = '默认配置';
+                saveConfigurations();
+                
+                showNotification('当前配置已设为默认内置配置，将在所有设备上自动应用', 'success');
+                return true;
+            } catch (e) {
+                console.error('设置默认配置失败:', e);
+                showNotification('设置默认配置失败：' + e.message, 'error');
+                return false;
+            }
+        }
+        
+        // 重置为默认配置
+        function resetToDefaultConfiguration() {
+            if (!defaultConfigData) {
+                showNotification('没有设置默认配置', 'warning');
+                return false;
+            }
+            
+            try {
+                // 应用默认配置数据
+                appData = JSON.parse(JSON.stringify(defaultConfigData.data.appData));
+                favoriteScripts = JSON.parse(JSON.stringify(defaultConfigData.data.favoriteScripts));
+                subOptionTags = JSON.parse(JSON.stringify(defaultConfigData.data.subOptionTags));
+                primaryOptionTags = JSON.parse(JSON.stringify(defaultConfigData.data.primaryOptionTags));
+                primaryOptionTagColors = JSON.parse(JSON.stringify(defaultConfigData.data.primaryOptionTagColors));
+                subOptionTagColors = JSON.parse(JSON.stringify(defaultConfigData.data.subOptionTagColors));
+                selection = JSON.parse(JSON.stringify(defaultConfigData.data.selection));
+                
+                // 重新构建索引和渲染界面
+                buildContentIndex();
+                renderAllContent();
+                renderFavoriteScripts();
+                updateResult();
+                
+                // 保存当前状态
+                saveCurrentStateToConfig();
+                
+                showNotification('已重置为默认配置', 'success');
+                return true;
+            } catch (e) {
+                console.error('重置默认配置失败:', e);
+                showNotification('重置默认配置失败：' + e.message, 'error');
+                return false;
+            }
+        }
+        
+        // 清除默认配置
+        function clearDefaultConfiguration() {
+            defaultConfigData = null;
+            saveDefaultConfiguration();
+            showNotification('默认配置已清除', 'success');
+        }
+        
+        // 检查是否有默认配置
+        function hasDefaultConfiguration() {
+            return defaultConfigData !== null;
+        }
+        
+        // 更新默认配置状态显示
+        function updateDefaultConfigStatus() {
+            const statusElement = document.getElementById('defaultConfigStatus');
+            if (statusElement) {
+                if (hasDefaultConfiguration()) {
+                    statusElement.textContent = '已设置默认配置';
+                    statusElement.className = 'text-xs text-green-700';
+                } else {
+                    statusElement.textContent = '未设置默认配置';
+                    statusElement.className = 'text-xs text-orange-700';
+                }
+            }
+        }
+        
         // 绑定配置管理事件监听器
         function setupConfigManagementListeners(modal) {
             // 切换配置
@@ -5163,6 +5322,31 @@
             if (exportBtn) {
                 exportBtn.addEventListener('click', function() {
                     exportConfiguration(currentConfigId);
+                });
+            }
+            
+            // 设为默认配置
+            const setDefaultBtn = modal.querySelector('#setDefaultConfigBtn');
+            if (setDefaultBtn) {
+                setDefaultBtn.addEventListener('click', function() {
+                    if (setCurrentAsDefaultConfiguration()) {
+                        showNotification('已设置为默认配置', 'success');
+                        updateDefaultConfigStatus();
+                    } else {
+                        showNotification('设置默认配置失败', 'error');
+                    }
+                });
+            }
+            
+            // 重置默认配置
+            const resetDefaultBtn = modal.querySelector('#resetDefaultConfigBtn');
+            if (resetDefaultBtn) {
+                resetDefaultBtn.addEventListener('click', function() {
+                    if (confirm('确定要清除默认配置吗？清除后将使用系统默认配置。')) {
+                        clearDefaultConfiguration();
+                        showNotification('已清除默认配置', 'success');
+                        updateDefaultConfigStatus();
+                    }
                 });
             }
             
