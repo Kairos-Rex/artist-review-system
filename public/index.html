@@ -483,21 +483,12 @@
         </div>
     </div>
 
-    <!-- 加载配置文件 -->
-    <script src="config.js"></script>
-    
     <script>
-        // API配置变量 - 从外部配置文件加载
-        // 如果config.js未加载或配置为空，使用默认空配置
-        if (typeof API_CONFIG === 'undefined' || !API_CONFIG) {
-            let API_CONFIG = {
-                apiKey: '', // 请在config.js文件中配置
-                botId: ''   // 请在config.js文件中配置
-            };
-            console.warn('⚠️ 配置文件未加载或配置为空，请检查config.js文件');
-        } else {
-            console.log('✅ 配置文件加载成功');
-        }
+        // API配置变量 - 直接保存在文件中
+        let API_CONFIG = {
+            apiKey: 'pat_SnrkhHeuv5zIVqz7DLC2sGhfO0z5SxJdAmHuIPoGudo0FbEwwAI6lQnlr9M5bSFX', // 在这里填写您的扣子API密钥
+            botId: '7548722284312772647'   // 在这里填写您的机器人ID
+        };
         
         // 全局变量
         let configManager;
