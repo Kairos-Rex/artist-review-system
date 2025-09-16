@@ -41,10 +41,40 @@ git push -u origin main
 6. 保持默认设置，点击 "Deploy"
 7. 等待部署完成，获得HTTPS域名
 
+## API配置说明
+
+### 配置文件管理
+本项目使用外部配置文件来管理敏感的API信息，确保安全性：
+
+1. **配置文件结构**：
+   - `public/config.js` - 实际配置文件（包含真实API密钥，已在.gitignore中排除）
+   - `public/config.example.js` - 配置模板文件（可安全提交到仓库）
+
+2. **本地开发配置**：
+   ```bash
+   # 复制模板文件
+   cp public/config.example.js public/config.js
+   
+   # 编辑config.js文件，填入您的API配置
+   # apiKey: 'pat_xxxxxxxxxx'  # 您的Coze API密钥
+   # botId: 'xxxxxxxxxx'      # 您的机器人ID
+   ```
+
+3. **部署环境配置**：
+   - 在部署平台（如Vercel）中，需要手动创建config.js文件
+   - 或使用环境变量进行配置管理
+
+### ⚠️ 安全提醒
+- `config.js` 文件包含敏感信息，已添加到 `.gitignore` 中
+- 请勿将真实的API密钥提交到Git仓库
+- 部署时需要在服务器上单独配置API密钥
+
 ## 项目文件说明
 
 ### 核心文件
-- `index(5).html` - 主应用文件
+- `public/index.html` - 主应用文件
+- `public/config.js` - API配置文件（本地，不提交到仓库）
+- `public/config.example.js` - 配置模板文件
 - `package.json` - 项目配置和依赖
 - `vercel.json` - Vercel部署配置
 - `.gitignore` - Git忽略文件配置
